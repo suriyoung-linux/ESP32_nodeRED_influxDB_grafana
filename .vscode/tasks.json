@@ -1,0 +1,39 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "ESP32: Build",
+      "type": "shell",
+      "command": "/home/ubuntu/.platformio/penv/bin/pio",
+      "args": ["run"],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "ESP32: Upload",
+      "type": "shell",
+      "command": "/home/ubuntu/.platformio/penv/bin/pio",
+      "args": ["run", "-t", "upload"],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "ESP32: Monitor",
+      "type": "shell",
+      "command": "/home/ubuntu/.platformio/penv/bin/pio",
+      "args": ["device", "monitor"],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": []
+    }
+  ]
+}
