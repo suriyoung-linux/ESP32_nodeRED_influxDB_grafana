@@ -61,6 +61,8 @@ private:
     doc["weather"]["temp"]     = roundf(w.temp * 10.0f) / 10.0f;
     doc["weather"]["hum"]      = w.humidity;
     doc["weather"]["rain"]     = w.rainChance;
+    doc["weather"]["condition"] = w.condition;
+    doc["weather"]["clouds"]   = w.clouds;
     doc["weather"]["pm25"]     = roundf(w.pm25 * 10.0f) / 10.0f;
     doc["weather"]["aqi"]      = w.aqi;
     doc["weather"]["aqiLabel"] = aqiLabel(w.aqi);

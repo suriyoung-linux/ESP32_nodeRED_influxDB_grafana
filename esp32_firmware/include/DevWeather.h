@@ -20,10 +20,31 @@ static const char* aqiLabel(int aqi) {
   }
 }
 
+static const char* weatherConditionLabel(int weatherId, int clouds, int rainChance) {
+  if (weatherId >= 200 && weatherId < 300) return "Thunderstorm";
+  if (weatherId >= 300 && weatherId < 400) return "Light drizzle";
+  if (weatherId == 500) return "Light rain";
+  if (weatherId == 501) return "Moderate rain";
+  if (weatherId >= 502 && weatherId < 600) return "Heavy rain";
+  if (weatherId >= 600 && weatherId < 700) return "Cold rain";
+  if (weatherId >= 700 && weatherId < 800) return "Foggy";
+  if (weatherId == 800) return "Clear sky";
+  if (weatherId == 801) return "Few clouds";
+  if (weatherId == 802) return "Partly cloudy";
+  if (weatherId == 803 || weatherId == 804) return "Cloudy";
+  if (rainChance >= 70) return "Likely rain";
+  if (clouds >= 75) return "Cloudy";
+  if (clouds >= 35) return "Partly cloudy";
+  return "Clear sky";
+}
+
 struct WeatherData {
   float   temp        = 0;    // °C
   int     humidity    = 0;    // %
   int     rainChance  = 0;    // % (pop จาก forecast หรือ rain flag จาก current)
+  int     weatherId   = 0;    // OpenWeather condition id
+  int     clouds      = 0;    // cloud cover %
+  char    condition[24] = "N/A";
   float   pm25        = 0;    // µg/m³
   int     aqi         = 0;    // 1-5
   bool    valid       = false;
@@ -76,16 +97,18 @@ private:
     // rain.1h มีค่า = กำลังฝนตก; rain chance ดูจาก pop ใน forecast
     // ที่นี่ใช้ความน่าจะเป็นจาก clouds + weather id แทน (current ไม่มี pop)
     // weather id 2xx=thunder, 3xx=drizzle, 5xx=rain, 6xx=snow, 7xx=atmo
-    int wid = doc["weather"][0]["id"].as<int>();
-    bool raining = (wid >= 200 && wid < 700);
+    data.weatherId = doc["weather"][0]["id"].as<int>();
+    data.clouds = doc["clouds"]["all"].as<int>();  // 0-100
+    bool raining = (data.weatherId >= 200 && data.weatherId < 700);
     // ถ้ากำลังฝนตกอยู่ให้ 100%, ไม่ก็ดู cloud cover เป็น proxy
     if (raining) {
       data.rainChance = 100;
     } else {
-      int clouds = doc["clouds"]["all"].as<int>();  // 0-100
       // แปลง cloud cover → rain chance อย่างหยาบๆ (ไม่มี pop ใน current)
-      data.rainChance = clouds / 2;  // max 50% ถ้าฟ้าครึ้มเต็มที่แต่ไม่ฝนตก
+      data.rainChance = data.clouds / 2;  // max 50% ถ้าฟ้าครึ้มเต็มที่แต่ไม่ฝนตก
     }
+    snprintf(data.condition, sizeof(data.condition), "%s",
+             weatherConditionLabel(data.weatherId, data.clouds, data.rainChance));
 
     return true;
   }
@@ -102,6 +125,8 @@ private:
 
     float pop = doc["list"][0]["pop"].as<float>();  // 0.0 - 1.0
     data.rainChance = (int)(pop * 100);
+    snprintf(data.condition, sizeof(data.condition), "%s",
+             weatherConditionLabel(data.weatherId, data.clouds, data.rainChance));
     return true;
   }
 
@@ -135,8 +160,8 @@ public:
       fetchAirPollution();  // optional — ถ้าล้มเหลว pm25/aqi ยังเป็น 0
       data.valid = true;
       data.fetchedAt = millis();
-      Serial.printf("[Weather] T=%.1f°C H=%d%% Rain=%d%% PM2.5=%.1f AQI=%d(%s)\n",
-                    data.temp, data.humidity, data.rainChance,
+      Serial.printf("[Weather] T=%.1f°C H=%d%% %s Rain=%d%% PM2.5=%.1f AQI=%d(%s)\n",
+                    data.temp, data.humidity, data.condition, data.rainChance,
                     data.pm25, data.aqi, aqiLabel(data.aqi));
     }
     return ok;

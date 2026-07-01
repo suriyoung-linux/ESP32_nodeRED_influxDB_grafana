@@ -393,6 +393,28 @@ static const char DASHBOARD_HTML[] PROGMEM = R"rawhtml(
     gap: 14px;
   }
 
+  .mqtt-guide {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+
+  .guide-box {
+    min-height: 70px;
+    padding: 10px 12px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--panel-soft);
+  }
+
+  .guide-value {
+    margin-top: 7px;
+    color: #1f2a44;
+    font: 850 .86rem ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    overflow-wrap: anywhere;
+  }
+
   .topic-group-title {
     margin: 0 0 8px;
     color: #344054;
@@ -494,6 +516,7 @@ static const char DASHBOARD_HTML[] PROGMEM = R"rawhtml(
     .summary,
     .grid,
     .topics,
+    .mqtt-guide,
     .metric-grid {
       grid-template-columns: 1fr;
     }
@@ -609,7 +632,9 @@ static const char DASHBOARD_HTML[] PROGMEM = R"rawhtml(
             <div class="metric-value c-blue" id="w-hum">--</div>
           </div>
           <div class="metric-box full">
-            <div class="label">Rain chance <span style="float:right;color:var(--blue)" id="w-rain-pct">--%</span></div>
+            <div class="label">Weather condition</div>
+            <div class="metric-value c-blue" id="w-condition">--</div>
+            <div class="fineprint">Rain chance <span id="w-rain-pct">--%</span></div>
             <div class="gauge"><div class="bar" id="w-rain-bar"></div></div>
           </div>
           <div class="metric-box">
@@ -647,27 +672,41 @@ static const char DASHBOARD_HTML[] PROGMEM = R"rawhtml(
 
     <article class="panel span-3">
       <div class="panel-head">
-        <h2 class="panel-title">MQTT Broker</h2>
+        <h2 class="panel-title">MQTT Setup for This Board</h2>
         <div>
           <span id="mqtt-status-badge"></span>
           <span class="panel-meta" id="mqtt-host-label">--</span>
         </div>
       </div>
       <div class="panel-body">
+        <div class="mqtt-guide">
+          <div class="guide-box">
+            <div class="label">MQTT Explorer connection</div>
+            <div class="guide-value" id="mqtt-connection-guide">mqtt://--</div>
+          </div>
+          <div class="guide-box">
+            <div class="label">Board topic prefix</div>
+            <div class="guide-value" id="mqtt-base-guide">--</div>
+          </div>
+          <div class="guide-box">
+            <div class="label">How to read this table</div>
+            <div class="guide-value">PUB = board sends · SUB = board listens</div>
+          </div>
+        </div>
         <div class="topics">
           <div>
-            <p class="topic-group-title">Publish Topics</p>
-            <div class="topic-row"><span class="dir pub">PUB</span><div><code id="t-telemetry">--</code><div class="topic-desc">ข้อมูลทั้งหมด (ทุก 5s)</div></div></div>
-            <div class="topic-row"><span class="dir pub">PUB</span><div><code id="t-status">--</code><div class="topic-desc">online / offline (LWT)</div></div></div>
-            <div class="topic-row"><span class="dir pub">PUB</span><div><code id="t-r1-state">--</code><div class="topic-desc">Relay 1 state</div></div></div>
-            <div class="topic-row"><span class="dir pub">PUB</span><div><code id="t-r2-state">--</code><div class="topic-desc">Relay 2 state</div></div></div>
-            <div class="topic-row"><span class="dir pub">PUB</span><div><code id="t-r3-state">--</code><div class="topic-desc">Relay 3 state</div></div></div>
+            <p class="topic-group-title">ESP32 sends data here</p>
+            <div class="topic-row"><span class="dir pub">PUB</span><div><code id="t-telemetry">--</code><div class="topic-desc">บอร์ดส่งข้อมูล sensor ทั้งหมดทุก 5s</div></div></div>
+            <div class="topic-row"><span class="dir pub">PUB</span><div><code id="t-status">--</code><div class="topic-desc">บอร์ดบอกสถานะ online / offline</div></div></div>
+            <div class="topic-row"><span class="dir pub">PUB</span><div><code id="t-r1-state">--</code><div class="topic-desc">บอร์ดส่งสถานะ Relay 1</div></div></div>
+            <div class="topic-row"><span class="dir pub">PUB</span><div><code id="t-r2-state">--</code><div class="topic-desc">บอร์ดส่งสถานะ Relay 2</div></div></div>
+            <div class="topic-row"><span class="dir pub">PUB</span><div><code id="t-r3-state">--</code><div class="topic-desc">บอร์ดส่งสถานะ Relay 3</div></div></div>
           </div>
           <div>
-            <p class="topic-group-title">Subscribe Topics</p>
-            <div class="topic-row"><span class="dir sub">SUB</span><div><code id="t-r1-set">--</code><div class="topic-desc">ON / OFF / TOGGLE</div></div></div>
-            <div class="topic-row"><span class="dir sub">SUB</span><div><code id="t-r2-set">--</code><div class="topic-desc">ON / OFF / TOGGLE</div></div></div>
-            <div class="topic-row"><span class="dir sub">SUB</span><div><code id="t-r3-set">--</code><div class="topic-desc">ON / OFF / TOGGLE</div></div></div>
+            <p class="topic-group-title">Send commands to ESP32 here</p>
+            <div class="topic-row"><span class="dir sub">SUB</span><div><code id="t-r1-set">--</code><div class="topic-desc">ส่ง ON / OFF / TOGGLE เพื่อสั่ง Relay 1</div></div></div>
+            <div class="topic-row"><span class="dir sub">SUB</span><div><code id="t-r2-set">--</code><div class="topic-desc">ส่ง ON / OFF / TOGGLE เพื่อสั่ง Relay 2</div></div></div>
+            <div class="topic-row"><span class="dir sub">SUB</span><div><code id="t-r3-set">--</code><div class="topic-desc">ส่ง ON / OFF / TOGGLE เพื่อสั่ง Relay 3</div></div></div>
             <div class="example">mosquitto_pub -h broker.hivemq.com -t <span id="t-r1-set-ex">--</span> -m ON</div>
           </div>
         </div>
@@ -765,6 +804,7 @@ function render(d) {
     setText('w-temp', Number(w.temp).toFixed(1));
     setText('w-hum', w.hum + '%');
     setText('w-rain-pct', w.rain + '%');
+    setText('w-condition', weatherText(w.condition, w.rain, w.clouds));
     setBar('w-rain-bar', w.rain, '#2563eb');
     setText('w-pm25', Number(w.pm25).toFixed(1));
     setText('w-aqi-num', w.aqi);
@@ -797,6 +837,8 @@ function render(d) {
   if (d.mqtt) {
     const m = d.mqtt;
     setText('mqtt-host-label', m.host + ':' + m.port);
+    setText('mqtt-connection-guide', 'mqtt://' + m.host + ':' + m.port);
+    setText('mqtt-base-guide', m.base || '--');
     setText('summary-mqtt', m.connected ? 'MQTT connected' : 'MQTT disconnected');
     document.getElementById('mqtt-status-badge').innerHTML =
       m.connected ? badge('Connected', 'ok') : badge('Disconnected', 'bad');
@@ -822,6 +864,25 @@ function toggleRelay(n) {
   if (ws && ws.readyState === WebSocket.OPEN) {
     ws.send(JSON.stringify({ cmd: 'relay', n }));
   }
+}
+
+function weatherText(condition, rainChance, clouds) {
+  const key = String(condition || '').toLowerCase();
+  if (key.includes('thunder')) return 'พายุฝนฟ้าคะนอง';
+  if (key.includes('drizzle')) return 'ฝนตกเบา';
+  if (key.includes('light rain')) return 'ฝนตกเบา';
+  if (key.includes('moderate rain')) return 'ฝนตกปานกลาง';
+  if (key.includes('heavy rain')) return 'ฝนตกหนัก';
+  if (key.includes('cold rain')) return 'ฝนตก อากาศเย็น';
+  if (key.includes('fog')) return 'มีหมอก';
+  if (key.includes('few clouds')) return 'เมฆน้อย';
+  if (key.includes('partly')) return 'เมฆบางส่วน';
+  if (key.includes('cloudy')) return 'เมฆมาก';
+  if (key.includes('clear')) return 'อากาศสดใส';
+  if (rainChance >= 70) return 'มีแนวโน้มฝนตก';
+  if (clouds >= 75) return 'เมฆมาก';
+  if (clouds >= 35) return 'เมฆบางส่วน';
+  return 'อากาศสดใส';
 }
 
 function fmtUptime(sec) {
