@@ -1,7 +1,6 @@
 services:
   mqtt:
     image: eclipse-mosquitto:2
-    container_name: iot-mqtt
     restart: unless-stopped
     ports:
       - "${MQTT_PORT}:1883"
@@ -15,7 +14,6 @@ services:
 
   nodered:
     image: nodered/node-red:latest
-    container_name: iot-nodered
     restart: unless-stopped
     environment:
       - TZ=${TZ}
@@ -31,7 +29,6 @@ services:
 
   influxdb:
     image: influxdb:2
-    container_name: iot-influxdb
     restart: unless-stopped
     environment:
       - TZ=${TZ}
@@ -45,7 +42,6 @@ services:
 
   grafana:
     image: grafana/grafana:latest
-    container_name: iot-grafana
     restart: unless-stopped
     environment:
       - TZ=${TZ}
@@ -62,7 +58,6 @@ services:
 
 networks:
   iot_net:
-    name: iot_net
 
 volumes:
   mqtt_data:
