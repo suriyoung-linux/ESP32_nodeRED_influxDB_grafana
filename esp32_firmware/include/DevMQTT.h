@@ -36,6 +36,7 @@ private:
   unsigned long lastTelemetry = 0;
   bool          connected     = false;
 
+  char mqttClientId[sizeof(MQTT_CLIENT_ID) + 14] = {};
   char topicStatus[sizeof(MQTT_BASE) + 8] = {};
   char topicTelemetryBuf[sizeof(MQTT_BASE) + 11] = {};
   char relayStateTopic[3][sizeof(MQTT_BASE) + 16] = {};
@@ -43,6 +44,10 @@ private:
 
   // ── Topics ────────────────────────────────────────────────────
   void _initTopics() {
+    uint64_t mac = ESP.getEfuseMac();
+    snprintf(mqttClientId, sizeof(mqttClientId), "%s-%06llX",
+             MQTT_CLIENT_ID, (unsigned long long)(mac & 0xFFFFFF));
+
     snprintf(topicStatus, sizeof(topicStatus), "%s/status", MQTT_BASE);
     snprintf(topicTelemetryBuf, sizeof(topicTelemetryBuf), "%s/telemetry", MQTT_BASE);
     for (int i = 0; i < 3; i++) {
@@ -54,7 +59,7 @@ private:
   }
 
   // ── Build telemetry JSON ──────────────────────────────────────
-  String _buildTelemetry() {
+  size_t _buildTelemetry(char* out, size_t outSize) {
     JsonDocument doc;
 
     // relay
@@ -94,10 +99,17 @@ private:
     doc["sys"]["heap"]   = ESP.getFreeHeap();
     doc["sys"]["uptime"] = millis() / 1000UL;
 
-    String out;
-    out.reserve(512);
-    serializeJson(doc, out);
-    return out;
+    return serializeJson(doc, out, outSize);
+  }
+
+  bool _publishTelemetry() {
+    char payload[1024];
+    size_t len = _buildTelemetry(payload, sizeof(payload));
+    bool ok = (len > 0 && len < sizeof(payload)) &&
+              client.publish(topicTelemetryBuf, payload, true);
+    Serial.printf("[MQTT] >> %s telemetry (%u bytes, retained) topic=%s\n",
+                  ok ? "sent" : "FAILED", (unsigned)len, topicTelemetryBuf);
+    return ok;
   }
 
   // ── Publish relay state ───────────────────────────────────────
@@ -117,7 +129,7 @@ private:
   // ── Connect / reconnect ───────────────────────────────────────
   bool _connect() {
     bool ok = client.connect(
-      MQTT_CLIENT_ID,
+      mqttClientId,
       nullptr, nullptr,           // no auth on public broker
       topicStatus, 1, true,       // LWT: QoS1, retain
       "offline"
@@ -136,25 +148,31 @@ private:
     for (int i = 1; i <= 3; i++) _pubRelayState(i);
 
     connected = true;
-    Serial.printf("[MQTT] Connected to %s:%d\n", MQTT_HOST, MQTT_PORT);
+    Serial.printf("[MQTT] Connected to %s:%d as %s\n",
+                  MQTT_HOST, MQTT_PORT, mqttClientId);
+    _publishTelemetry();
+    lastTelemetry = millis();
     return true;
   }
 
   // ── Message callback ──────────────────────────────────────────
   static void _callback(char* topic, byte* payload, unsigned int len, DevMQTT* self) {
-    String msg;
-    msg.reserve(len + 1);
-    for (unsigned int i = 0; i < len; i++) msg += (char)payload[i];
-    msg.toUpperCase();
+    char msg[12];
+    unsigned int copyLen = len < sizeof(msg) - 1 ? len : sizeof(msg) - 1;
+    for (unsigned int i = 0; i < copyLen; i++) {
+      char c = (char)payload[i];
+      msg[i] = (c >= 'a' && c <= 'z') ? c - ('a' - 'A') : c;
+    }
+    msg[copyLen] = '\0';
 
-    Serial.printf("[MQTT] << %s = %s\n", topic, msg.c_str());
+    Serial.printf("[MQTT] << %s = %s\n", topic, msg);
 
     // match relay/N/set
     for (int n = 1; n <= 3; n++) {
       if (strcmp(topic, self->relaySetTopic[n - 1]) == 0) {
-        if      (msg == "ON")     self->relay[n-1]->on();
-        else if (msg == "OFF")    self->relay[n-1]->off();
-        else if (msg == "TOGGLE") self->relay[n-1]->toggle();
+        if      (strcmp(msg, "ON") == 0)     self->relay[n-1]->on();
+        else if (strcmp(msg, "OFF") == 0)    self->relay[n-1]->off();
+        else if (strcmp(msg, "TOGGLE") == 0) self->relay[n-1]->toggle();
         else break;
 
         self->_pubRelayState(n);
@@ -205,9 +223,7 @@ public:
     // telemetry publish
     if (millis() - lastTelemetry >= MQTT_TELEMETRY_INTERVAL) {
       lastTelemetry = millis();
-      String payload = _buildTelemetry();
-      client.publish(topicTelemetryBuf, payload.c_str());
-      Serial.printf("[MQTT] >> telemetry (%u bytes)\n", payload.length());
+      _publishTelemetry();
     }
   }
 

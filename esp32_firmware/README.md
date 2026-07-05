@@ -30,7 +30,7 @@ Firmware สำหรับ ESP32 DevKit V1 ที่รวม OLED UI, relay co
 | Monitor speed | `115200` |
 | Build flag | `CONFIG_ASYNC_TCP_RUNNING_CORE=1` |
 | Build ล่าสุด | `pio run` ผ่าน |
-| Memory ล่าสุด | RAM `15.4%`, Flash `37.7%` |
+| Memory ล่าสุด | RAM `15.9%`, Flash `37.9%` |
 
 > `huge_app.csv` ช่วยให้ firmware มีพื้นที่ app มากขึ้น แต่ไม่ใช่ partition แบบ dual OTA
 
@@ -90,6 +90,11 @@ include/
 
 blueprint.md                Detailed architecture notes
 platformio.ini              PlatformIO build/upload config
+
+../docker-compose.yml       Docker services: MQTT, Node-RED, InfluxDB, Grafana
+../.env                     Host port settings
+../nodered/flows/
+  esp32_level3_dashboard.json  Node-RED Dashboard flow, mounted to /data/flows.json
 ```
 
 ## Configuration
@@ -106,7 +111,7 @@ platformio.ini              PlatformIO build/upload config
 #define MQTT_HOST     "broker.hivemq.com"
 #define MQTT_PORT     1883
 #define MQTT_CLIENT_ID  "esp32-level3"
-#define MQTT_BASE       "ESP32-setup"
+#define MQTT_BASE       "ESP32-Level3"
 #define MQTT_TELEMETRY_INTERVAL  5000
 ```
 
@@ -222,33 +227,81 @@ Snapshot มีข้อมูลหลัก:
 Base topic ปัจจุบัน:
 
 ```text
-ESP32-setup
+ESP32-Level3
+```
+
+Node-RED Dashboard flow ใช้ base topic เดียวกันนี้ และถูก bind mount จาก:
+
+```text
+nodered/flows/esp32_level3_dashboard.json
+```
+
+ไปเป็นไฟล์ใน container:
+
+```text
+/data/flows.json
 ```
 
 Publish:
 
 | Topic | Payload |
 |---|---|
-| `ESP32-setup/telemetry` | JSON telemetry |
-| `ESP32-setup/status` | `online` / `offline` retained |
-| `ESP32-setup/relay/1/state` | `ON` / `OFF` retained |
-| `ESP32-setup/relay/2/state` | `ON` / `OFF` retained |
-| `ESP32-setup/relay/3/state` | `ON` / `OFF` retained |
+| `ESP32-Level3/telemetry` | JSON telemetry |
+| `ESP32-Level3/status` | `online` / `offline` retained |
+| `ESP32-Level3/relay/1/state` | `ON` / `OFF` retained |
+| `ESP32-Level3/relay/2/state` | `ON` / `OFF` retained |
+| `ESP32-Level3/relay/3/state` | `ON` / `OFF` retained |
 
 Subscribe:
 
 | Topic | Payload |
 |---|---|
-| `ESP32-setup/relay/1/set` | `ON`, `OFF`, `TOGGLE` |
-| `ESP32-setup/relay/2/set` | `ON`, `OFF`, `TOGGLE` |
-| `ESP32-setup/relay/3/set` | `ON`, `OFF`, `TOGGLE` |
+| `ESP32-Level3/relay/1/set` | `ON`, `OFF`, `TOGGLE` |
+| `ESP32-Level3/relay/2/set` | `ON`, `OFF`, `TOGGLE` |
+| `ESP32-Level3/relay/3/set` | `ON`, `OFF`, `TOGGLE` |
 
 ตัวอย่าง:
 
 ```bash
-mosquitto_pub -h broker.hivemq.com -t ESP32-setup/relay/1/set -m ON
-mosquitto_pub -h broker.hivemq.com -t ESP32-setup/relay/2/set -m TOGGLE
-mosquitto_sub -h broker.hivemq.com -t "ESP32-setup/#"
+mosquitto_pub -h broker.hivemq.com -t ESP32-Level3/relay/1/set -m ON
+mosquitto_pub -h broker.hivemq.com -t ESP32-Level3/relay/2/set -m TOGGLE
+mosquitto_sub -h broker.hivemq.com -t "ESP32-Level3/#"
+```
+
+## Node-RED Dashboard
+
+Docker Compose expose Node-RED ที่พอร์ต host `1881` ตาม `.env`
+
+```text
+Node-RED editor: http://localhost:1881
+Node-RED dashboard: http://localhost:1881/ui/
+```
+
+Flow หลักอยู่ที่:
+
+```text
+nodered/flows/esp32_level3_dashboard.json
+```
+
+Flow นี้ใช้ `node-red-dashboard@3.6.6` node แบบ classic:
+
+```text
+ui_gauge
+ui_text
+ui_switch
+```
+
+ถ้าแก้ flow ใน VS Code แล้วต้องการให้ Node-RED โหลดใหม่:
+
+```bash
+docker compose restart nodered
+```
+
+ตรวจสถานะ:
+
+```bash
+docker compose logs nodered
+docker compose ps nodered
 ```
 
 Telemetry example:
@@ -306,6 +359,8 @@ Keys:
 - cache local IP เป็น `char[]` ใน `main.cpp`
 - cache MQTT topics เป็น `char[]` ใน `DevMQTT`
 - cache dashboard MQTT topics ใน `DevWebServer`
+- ลด heap allocation ใน MQTT telemetry, MQTT command callback และ WebSocket JSON broadcast
+- ใช้ fixed JSON buffer ใน `DevWebServer` เพื่อลด heap fragmentation ระหว่าง broadcast ทุก 2 วินาที
 - ลดการสร้าง `String` ใน Weather URL และ MQTT/Web payload
 - JSON float ส่งเป็น number แทน stringified number
 - reserve JSON output buffer ก่อน serialize
@@ -345,6 +400,14 @@ Keys:
 - ต้องมี internet
 - เปลี่ยน `MQTT_CLIENT_ID` ให้ unique
 - ถ้าใช้ public broker ให้เปลี่ยน `MQTT_BASE` กัน topic ชนคนอื่น
+
+### Node-RED Dashboard ไม่ขึ้น
+
+- เปิด URL ให้ถูก: `http://localhost:1881/ui/`
+- ตรวจว่า `node-red-dashboard@3.6.6` ติดตั้งแล้ว
+- ตรวจว่า `nodered/flows/esp32_level3_dashboard.json` ถูก mount เป็น `/data/flows.json`
+- ตรวจ log ต้องเห็น `Dashboard version 3.6.6 started at /ui`
+- ตรวจ MQTT topic ต้องเป็น `ESP32-Level3/telemetry`
 
 ### XY-MD03 เป็น SIM ตลอด
 

@@ -13,7 +13,7 @@
 | Upload / Monitor speed | `115200` |
 | Build flag | `CONFIG_ASYNC_TCP_RUNNING_CORE=1` |
 | Build ล่าสุด | ผ่าน `pio run` |
-| Memory ล่าสุด | RAM `15.4%`, Flash `37.7%` ของ huge app partition |
+| Memory ล่าสุด | RAM `15.9%`, Flash `37.9%` ของ huge app partition |
 
 > `huge_app.csv` เพิ่มพื้นที่โปรแกรมให้เหลือ headroom เยอะขึ้น เหมาะกับ firmware ที่มี dashboard, HTTPS weather, MQTT และ async web server อยู่ในตัว แต่ partition นี้ไม่ใช่แบบ dual OTA
 
@@ -101,6 +101,11 @@ include/
   DevXYMDSensor.h           XY-MD03 Modbus sensor + simulation fallback
   DevIsoInput.h             Reusable isolated input helper
   DevPZEM.h                 PZEM-016 helper, currently not wired in main.cpp
+
+docker-compose.yml          MQTT, Node-RED, InfluxDB, Grafana stack
+.env                        Host port mapping and service env
+nodered/flows/
+  esp32_level3_dashboard.json  Classic Node-RED Dashboard flow, mounted to /data/flows.json
 ```
 
 ## Class Responsibilities
@@ -203,7 +208,7 @@ JSON snapshot หลัก:
   "mqtt": {
     "host": "broker.hivemq.com",
     "port": 1883,
-    "base": "ESP32-setup",
+    "base": "ESP32-Level3",
     "connected": true
   },
   "sys": {"heap": 120000, "uptime": 1234}
@@ -219,21 +224,31 @@ Config อยู่ใน `include/config.h`
 | Host | `broker.hivemq.com` |
 | Port | `1883` |
 | Client ID | `esp32-level3` |
-| Base topic | `ESP32-setup` |
+| Base topic | `ESP32-Level3` |
 | Telemetry interval | `5000 ms` |
+
+Node-RED / Docker:
+
+| ค่า | ปัจจุบัน |
+|---|---|
+| Node-RED editor | `http://localhost:1881` |
+| Node-RED dashboard | `http://localhost:1881/ui/` |
+| Flow file | `nodered/flows/esp32_level3_dashboard.json` |
+| Container flow path | `/data/flows.json` |
+| Dashboard package | `node-red-dashboard@3.6.6` |
 
 Topic map:
 
 | Topic | Direction | Payload |
 |---|---|---|
-| `ESP32-setup/telemetry` | publish | JSON telemetry |
-| `ESP32-setup/status` | publish/LWT | `online` / `offline` retained |
-| `ESP32-setup/relay/1/state` | publish | `ON` / `OFF` retained |
-| `ESP32-setup/relay/2/state` | publish | `ON` / `OFF` retained |
-| `ESP32-setup/relay/3/state` | publish | `ON` / `OFF` retained |
-| `ESP32-setup/relay/1/set` | subscribe | `ON` / `OFF` / `TOGGLE` |
-| `ESP32-setup/relay/2/set` | subscribe | `ON` / `OFF` / `TOGGLE` |
-| `ESP32-setup/relay/3/set` | subscribe | `ON` / `OFF` / `TOGGLE` |
+| `ESP32-Level3/telemetry` | publish | JSON telemetry |
+| `ESP32-Level3/status` | publish/LWT | `online` / `offline` retained |
+| `ESP32-Level3/relay/1/state` | publish | `ON` / `OFF` retained |
+| `ESP32-Level3/relay/2/state` | publish | `ON` / `OFF` retained |
+| `ESP32-Level3/relay/3/state` | publish | `ON` / `OFF` retained |
+| `ESP32-Level3/relay/1/set` | subscribe | `ON` / `OFF` / `TOGGLE` |
+| `ESP32-Level3/relay/2/set` | subscribe | `ON` / `OFF` / `TOGGLE` |
+| `ESP32-Level3/relay/3/set` | subscribe | `ON` / `OFF` / `TOGGLE` |
 
 Optimization ล่าสุดใน `DevMQTT`:
 
@@ -241,6 +256,19 @@ Optimization ล่าสุดใน `DevMQTT`:
 - ใช้ `strcmp()` แทนสร้าง `String` topic ใน callback
 - telemetry JSON ใช้ตัวเลขจริงแทน `serialized(String(float))`
 - reserve output buffer ก่อน `serializeJson()`
+- MQTT client id ต่อท้าย MAC 6 หลักอัตโนมัติ เพื่อลดปัญหา client id ซ้ำบน public broker
+- publish telemetry แบบ retained และส่งทันทีหลัง MQTT connect สำเร็จ
+- serialize telemetry ลง `char[]` โดยตรง แทนสร้าง `String` payload ทุกครั้ง
+- parse MQTT command payload ด้วย fixed buffer แทนต่อ `String` ใน callback
+
+Node-RED flow ใช้ topic ที่ต้องตรงกับ firmware:
+
+```text
+ESP32-Level3/telemetry
+ESP32-Level3/relay/1/set
+ESP32-Level3/relay/2/set
+ESP32-Level3/relay/3/set
+```
 
 ## Weather
 
@@ -313,6 +341,7 @@ Relay state จะเขียน NVS เฉพาะเมื่อค่าเ
 - ใช้ `huge_app.csv` เพื่อเพิ่ม flash headroom
 - ลด dynamic `String` ใน path ที่เรียกบ่อย เช่น MQTT topic, dashboard topic, weather URL, OLED IP
 - cache topic MQTT/Web dashboard ล่วงหน้า
+- ใช้ fixed JSON buffer สำหรับ WebSocket/API snapshot เพื่อลด heap fragmentation
 - ใช้ numeric JSON value แทน stringified float
 - reserve JSON output `String` ก่อน serialize
 - ป้องกัน string buffer ไม่ null-terminated ใน OLED cache

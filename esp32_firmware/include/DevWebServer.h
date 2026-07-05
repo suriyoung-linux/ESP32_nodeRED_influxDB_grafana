@@ -33,6 +33,7 @@ private:
   char mqttStatusTopic[sizeof(MQTT_BASE) + 8] = {};
   char mqttRelayStateTopic[3][sizeof(MQTT_BASE) + 16] = {};
   char mqttRelaySetTopic[3][sizeof(MQTT_BASE) + 14] = {};
+  char jsonBuffer[1536] = {};
 
   void initMqttTopics() {
     snprintf(mqttTelemetryTopic, sizeof(mqttTelemetryTopic), "%s/telemetry", MQTT_BASE);
@@ -46,7 +47,7 @@ private:
   }
 
   // ─── สร้าง JSON payload ───────────────────────────────────────
-  String buildJson() {
+  size_t buildJson(char* out, size_t outSize) {
     JsonDocument doc;
 
     // relay array [r1, r2, r3]
@@ -74,8 +75,14 @@ private:
     snprintf(ip, sizeof(ip), "%u.%u.%u.%u", localIp[0], localIp[1], localIp[2], localIp[3]);
     doc["wifi"]["ssid"] = WiFi.SSID();
     doc["wifi"]["ip"]   = ip;
-    doc["wifi"]["mac"]  = WiFi.macAddress();
     doc["wifi"]["rssi"] = WiFi.RSSI();
+
+    uint8_t mac[6];
+    char macText[18];
+    WiFi.macAddress(mac);
+    snprintf(macText, sizeof(macText), "%02X:%02X:%02X:%02X:%02X:%02X",
+             mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+    doc["wifi"]["mac"] = macText;
 
     // DS18B20
     doc["ds18"]["temp"] = roundf(ds18->getTemp() * 100.0f) / 100.0f;
@@ -105,18 +112,26 @@ private:
     doc["sys"]["heap"]   = ESP.getFreeHeap();
     doc["sys"]["uptime"] = millis() / 1000UL;
 
-    String out;
-    out.reserve(1024);
-    serializeJson(doc, out);
-    return out;
+    return serializeJson(doc, out, outSize);
+  }
+
+  const char* buildJson() {
+    size_t len = buildJson(jsonBuffer, sizeof(jsonBuffer));
+    if (len == 0 || len >= sizeof(jsonBuffer)) {
+      snprintf(jsonBuffer, sizeof(jsonBuffer), "{\"error\":\"json_overflow\"}");
+    }
+    return jsonBuffer;
   }
 
   // ─── WebSocket event handler ──────────────────────────────────
   void onWsEvent(AsyncWebSocket* server, AsyncWebSocketClient* client,
                  AwsEventType type, void* arg, uint8_t* data, size_t len) {
     if (type == WS_EVT_CONNECT) {
-      Serial.printf("[WS] Client #%u connected from %s\n",
-                    client->id(), client->remoteIP().toString().c_str());
+      char ip[20];
+      IPAddress remoteIp = client->remoteIP();
+      snprintf(ip, sizeof(ip), "%u.%u.%u.%u",
+               remoteIp[0], remoteIp[1], remoteIp[2], remoteIp[3]);
+      Serial.printf("[WS] Client #%u connected from %s\n", client->id(), ip);
       // ส่ง snapshot ทันทีที่ client เชื่อมต่อ
       client->text(buildJson());
 
@@ -127,21 +142,19 @@ private:
       AwsFrameInfo* info = (AwsFrameInfo*)arg;
       if (info->final && info->index == 0 && info->len == len
           && info->opcode == WS_TEXT) {
-        // รับคำสั่งจาก browser
-        String msg = String((char*)data, len);
-        handleWsMessage(client, msg);
+        handleWsMessage(client, data, len);
       }
     }
   }
 
   // ─── ประมวลผลคำสั่งจาก browser ───────────────────────────────
-  void handleWsMessage(AsyncWebSocketClient* client, const String& msg) {
+  void handleWsMessage(AsyncWebSocketClient* client, const uint8_t* data, size_t len) {
     JsonDocument doc;
-    if (deserializeJson(doc, msg) != DeserializationError::Ok) return;
+    if (deserializeJson(doc, data, len) != DeserializationError::Ok) return;
 
-    String cmd = doc["cmd"].as<String>();
+    const char* cmd = doc["cmd"] | "";
 
-    if (cmd == "relay") {
+    if (strcmp(cmd, "relay") == 0) {
       int n = doc["n"].as<int>(); // 1-3
       if (n >= 1 && n <= 3) {
         relay[n - 1]->toggle();
@@ -192,8 +205,10 @@ public:
     });
 
     server.begin();
-    Serial.printf("[WebServer] Started — http://%s\n",
-                  WiFi.localIP().toString().c_str());
+    char ip[20];
+    IPAddress localIp = WiFi.localIP();
+    snprintf(ip, sizeof(ip), "%u.%u.%u.%u", localIp[0], localIp[1], localIp[2], localIp[3]);
+    Serial.printf("[WebServer] Started — http://%s\n", ip);
   }
 
   // เรียกใน loop() — broadcast ทุก BROADCAST_INTERVAL ms

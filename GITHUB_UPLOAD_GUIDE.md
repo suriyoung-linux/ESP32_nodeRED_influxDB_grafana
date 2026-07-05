@@ -21,7 +21,7 @@ git config --global user.email "อีเมล GitHub ของคุณ"
 
 1. เข้าเว็บไซต์ <https://github.com>
 2. กดปุ่ม **New repository**
-3. ตั้งชื่อ repository เช่น `Grafana_NodeRed`
+3. ตั้งชื่อ repository เช่น `ESP32-Project-Level3`
 4. เลือกเป็น **Public** หรือ **Private**
 5. ไม่ต้องติ๊ก `Add a README file` ถ้าในโปรเจกต์มีไฟล์อยู่แล้ว
 6. กด **Create repository**
@@ -108,8 +108,18 @@ git push
 ตัวอย่าง:
 
 ```bash
-git commit -m "Update ESP32 MQTT configuration"
+git commit -m "Update ESP32 Level3 MQTT and Node-RED dashboard"
 git push
+```
+
+ไฟล์สำคัญของโปรเจกต์นี้ที่ควรตรวจว่าอยู่ใน commit:
+
+```text
+esp32_firmware/
+docker-compose.yml
+.env
+nodered/flows/esp32_level3_dashboard.json
+DOCKER_GUIDE.md
 ```
 
 ## 7. ดึงโค้ดล่าสุดจาก GitHub

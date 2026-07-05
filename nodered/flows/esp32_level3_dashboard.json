@@ -1,0 +1,716 @@
+[
+    {
+        "id": "tab_esp32",
+        "type": "tab",
+        "label": "ESP32 Level3",
+        "disabled": false,
+        "info": ""
+    },
+    {
+        "id": "node_mqtt_in_telemetry",
+        "type": "mqtt in",
+        "z": "tab_esp32",
+        "name": "Telemetry",
+        "topic": "ESP32-Level3/telemetry",
+        "qos": "0",
+        "datatype": "json",
+        "broker": "0ac163c9e74fa511",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 90,
+        "y": 220,
+        "wires": [
+            [
+                "node_parse_telemetry",
+                "node_debug_telemetry"
+            ]
+        ]
+    },
+    {
+        "id": "node_parse_telemetry",
+        "type": "function",
+        "z": "tab_esp32",
+        "name": "Parse Telemetry",
+        "func": "var data = msg.payload;\n\n// DS18B20\nflow.set('ds18_temp', data.ds18 ? data.ds18.temp : null);\nflow.set('ds18_sim',  data.ds18 ? data.ds18.sim  : null);\n\n// XY-MD03\nflow.set('xymd_temp', data.xymd ? data.xymd.temp : null);\nflow.set('xymd_hum',  data.xymd ? data.xymd.hum  : null);\n\n// Weather\nflow.set('weather', data.weather || {});\n\n// System\nflow.set('sys', data.sys || {});\n\n// Relay status\nif (data.relay) {\n    flow.set('relay1', data.relay['1']);\n    flow.set('relay2', data.relay['2']);\n    flow.set('relay3', data.relay['3']);\n}\n\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 310,
+        "y": 400,
+        "wires": [
+            [
+                "node_split_telemetry"
+            ]
+        ]
+    },
+    {
+        "id": "node_split_telemetry",
+        "type": "function",
+        "z": "tab_esp32",
+        "name": "Split to Outputs",
+        "func": "var d = msg.payload;\n\nvar ds18_temp  = { payload: d.ds18  ? d.ds18.temp  : '--' };\nvar xymd_temp  = { payload: d.xymd  ? d.xymd.temp  : '--' };\nvar xymd_hum   = { payload: d.xymd  ? d.xymd.hum   : '--' };\nvar w_temp     = { payload: d.weather ? d.weather.temp  : '--' };\nvar w_hum      = { payload: d.weather ? d.weather.hum   : '--' };\nvar w_rain     = { payload: d.weather ? d.weather.rain  : '--' };\nvar w_pm25     = { payload: d.weather ? d.weather.pm25  : '--' };\nvar w_aqi_lbl  = { payload: d.weather ? (d.weather.aqi + ' - ' + d.weather.aqiLabel) : '--' };\nvar sys_ip     = { payload: d.sys ? d.sys.ip     : '--' };\nvar sys_rssi   = { payload: d.sys ? d.sys.rssi   : '--' };\nvar sys_heap   = { payload: d.sys ? Math.round(d.sys.heap/1024) + ' KB' : '--' };\nvar sys_uptime = { payload: d.sys ? d.sys.uptime + ' s' : '--' };\n\nvar relay1_val = { payload: d.relay ? (d.relay['1']==='ON' ? true : false) : false };\nvar relay2_val = { payload: d.relay ? (d.relay['2']==='ON' ? true : false) : false };\nvar relay3_val = { payload: d.relay ? (d.relay['3']==='ON' ? true : false) : false };\n\nreturn [ds18_temp, xymd_temp, xymd_hum, w_temp, w_hum, w_rain, w_pm25, w_aqi_lbl, sys_ip, sys_rssi, sys_heap, sys_uptime, relay1_val, relay2_val, relay3_val];",
+        "outputs": 15,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 530,
+        "y": 400,
+        "wires": [
+            [
+                "ui_gauge_ds18"
+            ],
+            [
+                "ui_gauge_xymd_temp"
+            ],
+            [
+                "ui_gauge_xymd_hum"
+            ],
+            [
+                "ui_text_w_temp"
+            ],
+            [
+                "ui_text_w_hum"
+            ],
+            [
+                "ui_text_w_rain"
+            ],
+            [
+                "ui_text_w_pm25"
+            ],
+            [
+                "ui_text_w_aqi"
+            ],
+            [
+                "ui_text_sys_ip"
+            ],
+            [
+                "ui_text_sys_rssi"
+            ],
+            [
+                "ui_text_sys_heap"
+            ],
+            [
+                "ui_text_sys_uptime"
+            ],
+            [
+                "ui_switch_relay1"
+            ],
+            [
+                "ui_switch_relay2"
+            ],
+            [
+                "ui_switch_relay3"
+            ]
+        ]
+    },
+    {
+        "id": "ui_gauge_ds18",
+        "type": "ui_gauge",
+        "z": "tab_esp32",
+        "name": "DS18B20 Temp",
+        "group": "ui_group_temp",
+        "order": 1,
+        "width": 0,
+        "height": 0,
+        "gtype": "gage",
+        "title": "DS18B20 Temperature",
+        "label": "°C",
+        "format": "{{value}}",
+        "min": 0,
+        "max": 60,
+        "colors": [
+            "#00b500",
+            "#e6e600",
+            "#ca3838"
+        ],
+        "seg1": 30,
+        "seg2": 40,
+        "className": "",
+        "x": 790,
+        "y": 180,
+        "wires": []
+    },
+    {
+        "id": "ui_gauge_xymd_temp",
+        "type": "ui_gauge",
+        "z": "tab_esp32",
+        "name": "XY-MD03 Temp",
+        "group": "ui_group_temp",
+        "order": 2,
+        "width": 0,
+        "height": 0,
+        "gtype": "gage",
+        "title": "XY-MD03 Temperature",
+        "label": "°C",
+        "format": "{{value}}",
+        "min": 0,
+        "max": 60,
+        "colors": [
+            "#00b500",
+            "#e6e600",
+            "#ca3838"
+        ],
+        "seg1": 30,
+        "seg2": 40,
+        "className": "",
+        "x": 810,
+        "y": 220,
+        "wires": []
+    },
+    {
+        "id": "ui_gauge_xymd_hum",
+        "type": "ui_gauge",
+        "z": "tab_esp32",
+        "name": "XY-MD03 Humidity",
+        "group": "ui_group_temp",
+        "order": 3,
+        "width": 0,
+        "height": 0,
+        "gtype": "gage",
+        "title": "XY-MD03 Humidity",
+        "label": "%",
+        "format": "{{value}}",
+        "min": 0,
+        "max": 100,
+        "colors": [
+            "#ca3838",
+            "#e6e600",
+            "#00b500"
+        ],
+        "seg1": 30,
+        "seg2": 60,
+        "className": "",
+        "x": 840,
+        "y": 260,
+        "wires": []
+    },
+    {
+        "id": "ui_text_w_temp",
+        "type": "ui_text",
+        "z": "tab_esp32",
+        "group": "ui_group_weather",
+        "order": 1,
+        "width": 0,
+        "height": 0,
+        "name": "Weather Temp",
+        "label": "Temperature",
+        "format": "{{msg.payload}} °C",
+        "layout": "row-spread",
+        "className": "",
+        "x": 1160,
+        "y": 260,
+        "wires": []
+    },
+    {
+        "id": "ui_text_w_hum",
+        "type": "ui_text",
+        "z": "tab_esp32",
+        "group": "ui_group_weather",
+        "order": 2,
+        "width": 0,
+        "height": 0,
+        "name": "Weather Humidity",
+        "label": "Humidity",
+        "format": "{{msg.payload}} %",
+        "layout": "row-spread",
+        "className": "",
+        "x": 1170,
+        "y": 300,
+        "wires": []
+    },
+    {
+        "id": "ui_text_w_rain",
+        "type": "ui_text",
+        "z": "tab_esp32",
+        "group": "ui_group_weather",
+        "order": 3,
+        "width": 0,
+        "height": 0,
+        "name": "Weather Rain",
+        "label": "Rain",
+        "format": "{{msg.payload}}",
+        "layout": "row-spread",
+        "className": "",
+        "x": 1160,
+        "y": 340,
+        "wires": []
+    },
+    {
+        "id": "ui_text_w_pm25",
+        "type": "ui_text",
+        "z": "tab_esp32",
+        "group": "ui_group_weather",
+        "order": 4,
+        "width": 0,
+        "height": 0,
+        "name": "PM2.5",
+        "label": "PM2.5",
+        "format": "{{msg.payload}} µg/m³",
+        "layout": "row-spread",
+        "className": "",
+        "x": 1060,
+        "y": 400,
+        "wires": []
+    },
+    {
+        "id": "ui_text_w_aqi",
+        "type": "ui_text",
+        "z": "tab_esp32",
+        "group": "ui_group_weather",
+        "order": 5,
+        "width": 0,
+        "height": 0,
+        "name": "AQI",
+        "label": "AQI",
+        "format": "{{msg.payload}}",
+        "layout": "row-spread",
+        "className": "",
+        "x": 1070,
+        "y": 440,
+        "wires": []
+    },
+    {
+        "id": "ui_text_sys_ip",
+        "type": "ui_text",
+        "z": "tab_esp32",
+        "group": "ui_group_system",
+        "order": 1,
+        "width": 0,
+        "height": 0,
+        "name": "IP Address",
+        "label": "IP Address",
+        "format": "{{msg.payload}}",
+        "layout": "row-spread",
+        "className": "",
+        "x": 1050,
+        "y": 480,
+        "wires": []
+    },
+    {
+        "id": "ui_text_sys_rssi",
+        "type": "ui_text",
+        "z": "tab_esp32",
+        "group": "ui_group_system",
+        "order": 2,
+        "width": 0,
+        "height": 0,
+        "name": "RSSI",
+        "label": "WiFi RSSI",
+        "format": "{{msg.payload}} dBm",
+        "layout": "row-spread",
+        "className": "",
+        "x": 1070,
+        "y": 520,
+        "wires": []
+    },
+    {
+        "id": "ui_text_sys_heap",
+        "type": "ui_text",
+        "z": "tab_esp32",
+        "group": "ui_group_system",
+        "order": 3,
+        "width": 0,
+        "height": 0,
+        "name": "Heap",
+        "label": "Free Heap",
+        "format": "{{msg.payload}}",
+        "layout": "row-spread",
+        "className": "",
+        "x": 1070,
+        "y": 560,
+        "wires": []
+    },
+    {
+        "id": "ui_text_sys_uptime",
+        "type": "ui_text",
+        "z": "tab_esp32",
+        "group": "ui_group_system",
+        "order": 4,
+        "width": 0,
+        "height": 0,
+        "name": "Uptime",
+        "label": "Uptime",
+        "format": "{{msg.payload}}",
+        "layout": "row-spread",
+        "className": "",
+        "x": 1060,
+        "y": 600,
+        "wires": []
+    },
+    {
+        "id": "ui_switch_relay1",
+        "type": "ui_switch",
+        "z": "tab_esp32",
+        "name": "Relay 1",
+        "label": "Relay 1",
+        "tooltip": "",
+        "group": "ui_group_relay",
+        "order": 1,
+        "width": 0,
+        "height": 0,
+        "passthru": false,
+        "decouple": false,
+        "topic": "relay1",
+        "topicType": "str",
+        "style": "",
+        "onvalue": "true",
+        "onvalueType": "bool",
+        "onicon": "",
+        "oncolor": "#00b500",
+        "offvalue": "false",
+        "offvalueType": "bool",
+        "officon": "",
+        "offcolor": "#b30000",
+        "animate": true,
+        "className": "",
+        "x": 920,
+        "y": 660,
+        "wires": [
+            [
+                "node_relay1_to_mqtt"
+            ]
+        ]
+    },
+    {
+        "id": "ui_switch_relay2",
+        "type": "ui_switch",
+        "z": "tab_esp32",
+        "name": "Relay 2",
+        "label": "Relay 2",
+        "tooltip": "",
+        "group": "ui_group_relay",
+        "order": 2,
+        "width": 0,
+        "height": 0,
+        "passthru": false,
+        "decouple": false,
+        "topic": "relay2",
+        "topicType": "str",
+        "style": "",
+        "onvalue": "true",
+        "onvalueType": "bool",
+        "onicon": "",
+        "oncolor": "#00b500",
+        "offvalue": "false",
+        "offvalueType": "bool",
+        "officon": "",
+        "offcolor": "#b30000",
+        "animate": true,
+        "className": "",
+        "x": 920,
+        "y": 720,
+        "wires": [
+            [
+                "node_relay2_to_mqtt"
+            ]
+        ]
+    },
+    {
+        "id": "ui_switch_relay3",
+        "type": "ui_switch",
+        "z": "tab_esp32",
+        "name": "Relay 3",
+        "label": "Relay 3",
+        "tooltip": "",
+        "group": "ui_group_relay",
+        "order": 3,
+        "width": 0,
+        "height": 0,
+        "passthru": false,
+        "decouple": false,
+        "topic": "relay3",
+        "topicType": "str",
+        "style": "",
+        "onvalue": "true",
+        "onvalueType": "bool",
+        "onicon": "",
+        "oncolor": "#00b500",
+        "offvalue": "false",
+        "offvalueType": "bool",
+        "officon": "",
+        "offcolor": "#b30000",
+        "animate": true,
+        "className": "",
+        "x": 920,
+        "y": 780,
+        "wires": [
+            [
+                "node_relay3_to_mqtt"
+            ]
+        ]
+    },
+    {
+        "id": "node_relay1_to_mqtt",
+        "type": "function",
+        "z": "tab_esp32",
+        "name": "Bool → ON/OFF",
+        "func": "msg.topic   = 'ESP32-Level3/relay/1/set';\nmsg.payload = msg.payload ? 'ON' : 'OFF';\nreturn msg;",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1130,
+        "y": 660,
+        "wires": [
+            [
+                "node_mqtt_out"
+            ]
+        ]
+    },
+    {
+        "id": "node_relay2_to_mqtt",
+        "type": "function",
+        "z": "tab_esp32",
+        "name": "Bool → ON/OFF",
+        "func": "msg.topic   = 'ESP32-Level3/relay/2/set';\nmsg.payload = msg.payload ? 'ON' : 'OFF';\nreturn msg;",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1130,
+        "y": 720,
+        "wires": [
+            [
+                "node_mqtt_out"
+            ]
+        ]
+    },
+    {
+        "id": "node_relay3_to_mqtt",
+        "type": "function",
+        "z": "tab_esp32",
+        "name": "Bool → ON/OFF",
+        "func": "msg.topic   = 'ESP32-Level3/relay/3/set';\nmsg.payload = msg.payload ? 'ON' : 'OFF';\nreturn msg;",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1130,
+        "y": 780,
+        "wires": [
+            [
+                "node_mqtt_out"
+            ]
+        ]
+    },
+    {
+        "id": "node_mqtt_out",
+        "type": "mqtt out",
+        "z": "tab_esp32",
+        "name": "Relay Command",
+        "topic": "",
+        "qos": "0",
+        "retain": "false",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "0ac163c9e74fa511",
+        "x": 1550,
+        "y": 740,
+        "wires": []
+    },
+    {
+        "id": "node_inject_toggle1",
+        "type": "inject",
+        "z": "tab_esp32",
+        "name": "TOGGLE Relay 1",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "ESP32-Level3/relay/1/set",
+        "payload": "TOGGLE",
+        "payloadType": "str",
+        "x": 1190,
+        "y": 860,
+        "wires": [
+            [
+                "node_mqtt_out"
+            ]
+        ]
+    },
+    {
+        "id": "node_inject_toggle2",
+        "type": "inject",
+        "z": "tab_esp32",
+        "name": "TOGGLE Relay 2",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "ESP32-Level3/relay/2/set",
+        "payload": "TOGGLE",
+        "payloadType": "str",
+        "x": 1190,
+        "y": 920,
+        "wires": [
+            [
+                "node_mqtt_out"
+            ]
+        ]
+    },
+    {
+        "id": "node_inject_toggle3",
+        "type": "inject",
+        "z": "tab_esp32",
+        "name": "TOGGLE Relay 3",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "ESP32-Level3/relay/3/set",
+        "payload": "TOGGLE",
+        "payloadType": "str",
+        "x": 1190,
+        "y": 980,
+        "wires": [
+            [
+                "node_mqtt_out"
+            ]
+        ]
+    },
+    {
+        "id": "node_debug_telemetry",
+        "type": "debug",
+        "z": "tab_esp32",
+        "name": "Debug Telemetry",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 310,
+        "y": 160,
+        "wires": []
+    },
+    {
+        "id": "0ac163c9e74fa511",
+        "type": "mqtt-broker",
+        "name": "",
+        "broker": "broker.hivemq.com",
+        "port": 1883,
+        "clientid": "",
+        "autoConnect": true,
+        "usetls": false,
+        "protocolVersion": 4,
+        "keepalive": 60,
+        "cleansession": true,
+        "autoUnsubscribe": true,
+        "birthTopic": "",
+        "birthQos": "0",
+        "birthRetain": "false",
+        "birthPayload": "",
+        "birthMsg": {},
+        "closeTopic": "",
+        "closeQos": "0",
+        "closeRetain": "false",
+        "closePayload": "",
+        "closeMsg": {},
+        "willTopic": "",
+        "willQos": "0",
+        "willRetain": "false",
+        "willPayload": "",
+        "willMsg": {},
+        "userProps": "",
+        "sessionExpiry": ""
+    },
+    {
+        "id": "ui_group_temp",
+        "type": "ui_group",
+        "name": "Temperature Sensors",
+        "tab": "ui_tab_main",
+        "order": 2,
+        "disp": true,
+        "width": "6",
+        "collapse": false
+    },
+    {
+        "id": "ui_group_weather",
+        "type": "ui_group",
+        "name": "Weather Data",
+        "tab": "ui_tab_main",
+        "order": 3,
+        "disp": true,
+        "width": "6",
+        "collapse": false
+    },
+    {
+        "id": "ui_group_system",
+        "type": "ui_group",
+        "name": "System Info",
+        "tab": "ui_tab_main",
+        "order": 4,
+        "disp": true,
+        "width": "6",
+        "collapse": false
+    },
+    {
+        "id": "ui_group_relay",
+        "type": "ui_group",
+        "name": "Relay Control",
+        "tab": "ui_tab_main",
+        "order": 1,
+        "disp": true,
+        "width": "6",
+        "collapse": false
+    },
+    {
+        "id": "ui_tab_main",
+        "type": "ui_tab",
+        "name": "ESP32 Dashboard",
+        "icon": "dashboard",
+        "disabled": false,
+        "hidden": false
+    },
+    {
+        "id": "55776349e2c8cd3e",
+        "type": "global-config",
+        "env": [],
+        "modules": {
+            "node-red-dashboard": "3.6.6"
+        }
+    }
+]

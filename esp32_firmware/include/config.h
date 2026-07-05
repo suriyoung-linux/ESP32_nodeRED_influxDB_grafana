@@ -21,7 +21,7 @@
 #define MQTT_CLIENT_ID  "esp32-level3"
 
 // Base topic — เปลี่ยนให้ unique เพื่อไม่ชนกับคนอื่นบน public broker
-#define MQTT_BASE       "ESP32-setup"
+#define MQTT_BASE       "ESP32-Level3"
 
 // Publish interval (ms)
 #define MQTT_TELEMETRY_INTERVAL  5000

@@ -27,9 +27,9 @@ docker compose version
 ```env
 MQTT_PORT=1883
 MQTT_WS_PORT=9001
-NODERED_PORT=1880
-INFLUXDB_PORT=8086
-GRAFANA_PORT=3000
+NODERED_PORT=1881
+INFLUXDB_PORT=8087
+GRAFANA_PORT=3001
 ```
 
 ค่าเริ่มต้นของ Grafana อยู่ในไฟล์เดียวกัน
@@ -79,7 +79,7 @@ iot-grafana   Up
 เข้าไปติดตั้ง Node-RED nodes ใน volume `/data` ของ container `nodered`
 
 ```bash
-docker compose exec nodered sh -lc 'cd /data && npm install node-red-dashboard node-red-contrib-influxdb'
+docker compose exec nodered sh -lc 'cd /data && npm install node-red-dashboard@3.6.6'
 ```
 
 ตรวจสอบรายการ node ที่ติดตั้งแล้ว
@@ -91,8 +91,19 @@ docker compose exec nodered sh -lc 'cd /data && npm ls --depth=0'
 ควรเห็นอย่างน้อยรายการเหล่านี้
 
 ```text
-node-red-dashboard
-node-red-contrib-influxdb
+node-red-dashboard@3.6.6
+```
+
+โปรเจกต์นี้ bind mount flow จากไฟล์ใน workspace เข้า Node-RED โดยตรง:
+
+```text
+nodered/flows/esp32_level3_dashboard.json -> /data/flows.json
+```
+
+ดังนั้นเมื่อแก้ไฟล์ flow ใน VS Code ให้ restart Node-RED เพื่อโหลด flow ใหม่:
+
+```bash
+docker compose restart nodered
 ```
 
 Restart Node-RED เพื่อให้โหลด palette ใหม่
@@ -112,10 +123,10 @@ docker compose ps
 เมื่อ container ทำงานครบแล้ว เข้าใช้งานได้ที่
 
 ```text
-Node-RED editor: http://localhost:1880
-Node-RED dashboard: http://localhost:1880/ui
-InfluxDB: http://localhost:8086
-Grafana: http://localhost:3000
+Node-RED editor: http://localhost:1881
+Node-RED dashboard: http://localhost:1881/ui/
+InfluxDB: http://localhost:8087
+Grafana: http://localhost:3001
 MQTT: localhost:1883
 MQTT WebSocket: localhost:9001
 ```
@@ -205,11 +216,12 @@ docker compose down -v
 
 ใช้เมื่ออยากเริ่มใหม่จากศูนย์เท่านั้น เพราะ volume เก็บข้อมูลสำคัญ เช่น
 
-- Flow ของ Node-RED
 - Node-RED nodes ที่ติดตั้งใน `/data`
 - ข้อมูล InfluxDB
 - การตั้งค่า Grafana
 - ข้อมูล persistence ของ MQTT
+
+หมายเหตุ: flow หลักของ Node-RED ถูก bind mount จาก `nodered/flows/esp32_level3_dashboard.json` จึงอยู่ใน workspace ไม่ได้หายไปพร้อม volume
 
 ## 11. อัปเดต Image
 
@@ -270,4 +282,24 @@ docker compose ps
 docker compose logs -f
 docker compose restart nodered
 docker compose down
+```
+
+## 15. Node-RED / MQTT ที่ใช้ในโปรเจกต์นี้
+
+Flow หลัก:
+
+```text
+nodered/flows/esp32_level3_dashboard.json
+```
+
+Dashboard ใช้ node-red-dashboard รุ่นเก่า (`ui_gauge`, `ui_text`, `ui_switch`) จึงต้องติดตั้ง `node-red-dashboard@3.6.6` และเปิดที่ path `/ui/`
+
+MQTT settings ที่ต้องตรงกับ firmware:
+
+```text
+Host: broker.hivemq.com
+Port: 1883
+Base topic: ESP32-Level3
+Telemetry: ESP32-Level3/telemetry
+Relay command: ESP32-Level3/relay/{1|2|3}/set
 ```
