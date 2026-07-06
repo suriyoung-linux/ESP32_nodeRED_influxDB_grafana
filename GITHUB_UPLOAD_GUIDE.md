@@ -117,10 +117,13 @@ git push
 ```text
 esp32_firmware/
 docker-compose.yml
-.env
+.env.example
+nodered/Dockerfile
 nodered/flows/esp32_level3_dashboard.json
 DOCKER_GUIDE.md
 ```
+
+> ไม่ควร commit ไฟล์ `.env` จริง เพราะอาจมีรหัสผ่านหรือ token ให้ commit `.env.example` แทน แล้วค่อย copy เป็น `.env` ในเครื่องที่ deploy
 
 ## 7. ดึงโค้ดล่าสุดจาก GitHub
 

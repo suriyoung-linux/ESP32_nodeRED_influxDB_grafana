@@ -103,7 +103,8 @@ include/
   DevPZEM.h                 PZEM-016 helper, currently not wired in main.cpp
 
 docker-compose.yml          MQTT, Node-RED, InfluxDB, Grafana stack
-.env                        Host port mapping and service env
+.env.example                Example local Docker settings
+.env                        Local Docker overrides and secrets, not committed
 nodered/flows/
   esp32_level3_dashboard.json  Classic Node-RED Dashboard flow, mounted to /data/flows.json
 ```
@@ -231,8 +232,8 @@ Node-RED / Docker:
 
 | ค่า | ปัจจุบัน |
 |---|---|
-| Node-RED editor | `http://localhost:1881` |
-| Node-RED dashboard | `http://localhost:1881/ui/` |
+| Node-RED editor | `http://localhost:1880` |
+| Node-RED dashboard | `http://localhost:1880/ui/` |
 | Flow file | `nodered/flows/esp32_level3_dashboard.json` |
 | Container flow path | `/data/flows.json` |
 | Dashboard package | `node-red-dashboard@3.6.6` |
@@ -279,7 +280,7 @@ OpenWeatherMap config:
 | `OWM_CITY_NAME` | `Nonthaburi` |
 | `OWM_LAT` | `13.909` |
 | `OWM_LON` | `100.424` |
-| `WEATHER_UPDATE_SEC` | `5000` |
+| `WEATHER_UPDATE_SEC` | `300` |
 
 API ที่ใช้:
 
@@ -293,7 +294,7 @@ Optimization ล่าสุดใน `DevWeather`:
 - `fetchJson()` รับ `const char*`
 - dashboard city แสดงจาก `OWM_CITY_NAME` ผ่าน payload ไม่ hardcode ใน HTML
 
-> ชื่อ `WEATHER_UPDATE_SEC` เป็นวินาที ดังนั้นค่า `5000` หมายถึง 5000 วินาที ไม่ใช่ 5000 ms ถ้าต้องการอัปเดตทุก 5 นาทีให้ใช้ `300`
+> ชื่อ `WEATHER_UPDATE_SEC` เป็นวินาที ดังนั้นค่า `300` คืออัปเดตทุก 5 นาที
 
 ## OLED
 
@@ -350,7 +351,7 @@ Relay state จะเขียน NVS เฉพาะเมื่อค่าเ
 ข้อที่ยังควรพิจารณาต่อ:
 
 - ย้าย XY-MD03 ออกจาก `Serial0` ไป `Serial2` เพื่อให้ USB serial monitor ใช้งานต่อได้หลัง boot
-- เปลี่ยน `WEATHER_UPDATE_SEC` เป็นค่าที่ตั้งใจจริง เช่น `300` สำหรับ 5 นาที
+- ตั้งค่า private เช่น `OWM_API_KEY` ใน `esp32_firmware/include/config_private.h` ซึ่งถูก ignore จาก Git
 - ถ้าต้องการ OTA ให้เปลี่ยน partition จาก `huge_app.csv` เป็น partition แบบ OTA และลดขนาด dashboard/libraries ตามจำเป็น
 - ไม่ควร commit API key จริงลง repo public
 

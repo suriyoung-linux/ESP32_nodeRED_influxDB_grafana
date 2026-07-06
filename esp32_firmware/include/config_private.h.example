@@ -1,0 +1,20 @@
+#ifndef CONFIG_PRIVATE_H
+#define CONFIG_PRIVATE_H
+
+// Copy this file to config_private.h and fill in local/private values.
+// config_private.h is ignored by Git.
+
+#define OWM_API_KEY "YOUR_OPENWEATHERMAP_KEY"
+
+// Optional overrides:
+// #define OWM_LAT "13.909"
+// #define OWM_LON "100.424"
+// #define OWM_CITY_NAME "Nonthaburi"
+// #define WEATHER_UPDATE_SEC 300
+// #define MQTT_HOST "broker.hivemq.com"
+// #define MQTT_PORT 1883
+// #define MQTT_CLIENT_ID "esp32-level3"
+// #define MQTT_BASE "ESP32-Level3"
+// #define MQTT_TELEMETRY_INTERVAL 5000
+
+#endif // CONFIG_PRIVATE_H

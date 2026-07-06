@@ -4,6 +4,12 @@
 
 > ให้รันคำสั่งทั้งหมดจากโฟลเดอร์โปรเจกต์นี้ เพื่อให้ Docker Compose อ่านไฟล์ `.env` และ `docker-compose.yml` ได้ถูกต้อง
 
+ถ้ายังไม่มี `.env` ให้สร้างจากไฟล์ตัวอย่างก่อน:
+
+```bash
+cp .env.example .env
+```
+
 ## 1. ตรวจสอบเครื่องมือที่ต้องมี
 
 ตรวจสอบ Docker
@@ -20,19 +26,19 @@ docker compose version
 
 ถ้าทั้งสองคำสั่งแสดงเวอร์ชัน แปลว่าเครื่องพร้อมใช้งาน
 
-## 2. ตรวจสอบไฟล์ตั้งค่าพอร์ต
+## 2. ตรวจสอบพอร์ตมาตรฐาน
 
-ค่าพอร์ตหลักอยู่ในไฟล์ `.env`
+พอร์ตหลักกำหนดไว้ตรงใน `docker-compose.yml` เพื่อให้ host port และ container port ตรงกันทั้งหมด
 
-```env
-MQTT_PORT=1883
-MQTT_WS_PORT=9001
-NODERED_PORT=1881
-INFLUXDB_PORT=8087
-GRAFANA_PORT=3001
+```text
+MQTT: 1883
+MQTT WebSocket: 9001
+Node-RED: 1880
+InfluxDB: 8086
+Grafana: 3000
 ```
 
-ค่าเริ่มต้นของ Grafana อยู่ในไฟล์เดียวกัน
+ค่าเริ่มต้นของ image, path และ Grafana อยู่ในไฟล์ `.env` โดยมีค่า default สำรองใน `docker-compose.yml`
 
 ```env
 GF_SECURITY_ADMIN_USER=admin
@@ -59,6 +65,8 @@ docker compose config
 docker compose up -d
 ```
 
+Node-RED ใช้ image ของโปรเจกต์ที่ติดตั้ง `node-red-dashboard@3.6.6` และ `node-red-contrib-influxdb@0.7.0` ไว้แล้ว ถ้ายังไม่มี image ในเครื่อง Docker Compose จะ build จาก `nodered/Dockerfile`
+
 ตรวจสอบสถานะ
 
 ```bash
@@ -68,30 +76,24 @@ docker compose ps
 สถานะที่ควรเห็นเมื่อระบบพร้อมใช้งาน
 
 ```text
-iot-mqtt      Up
-iot-nodered   Up (healthy)
-iot-influxdb  Up
-iot-grafana   Up
+mqtt      Up
+nodered   Up (healthy)
+influxdb  Up
+grafana   Up
 ```
 
-## 5. ติดตั้งเครื่องมือใน Node-RED
+## 5. ตรวจสอบเครื่องมือใน Node-RED
 
-เข้าไปติดตั้ง Node-RED nodes ใน volume `/data` ของ container `nodered`
+Flow dashboard ของโปรเจกต์นี้ใช้ `node-red-dashboard` รุ่น classic และใช้ `node-red-contrib-influxdb` สำหรับ InfluxDB โดยติดตั้งไว้ใน custom image แล้ว
 
 ```bash
-docker compose exec nodered sh -lc 'cd /data && npm install node-red-dashboard@3.6.6'
+docker compose exec nodered sh -lc 'npm ls --depth=0 node-red-dashboard node-red-contrib-influxdb'
 ```
 
-ตรวจสอบรายการ node ที่ติดตั้งแล้ว
+ถ้าเปิด Node-RED แล้วเจอ node แบบ `ui_*` หรือ `influxdb` เป็น unknown ให้ rebuild image แล้วเปิดใหม่:
 
 ```bash
-docker compose exec nodered sh -lc 'cd /data && npm ls --depth=0'
-```
-
-ควรเห็นอย่างน้อยรายการเหล่านี้
-
-```text
-node-red-dashboard@3.6.6
+docker compose up -d --build nodered
 ```
 
 โปรเจกต์นี้ bind mount flow จากไฟล์ใน workspace เข้า Node-RED โดยตรง:
@@ -101,12 +103,6 @@ nodered/flows/esp32_level3_dashboard.json -> /data/flows.json
 ```
 
 ดังนั้นเมื่อแก้ไฟล์ flow ใน VS Code ให้ restart Node-RED เพื่อโหลด flow ใหม่:
-
-```bash
-docker compose restart nodered
-```
-
-Restart Node-RED เพื่อให้โหลด palette ใหม่
 
 ```bash
 docker compose restart nodered
@@ -123,10 +119,10 @@ docker compose ps
 เมื่อ container ทำงานครบแล้ว เข้าใช้งานได้ที่
 
 ```text
-Node-RED editor: http://localhost:1881
-Node-RED dashboard: http://localhost:1881/ui/
-InfluxDB: http://localhost:8087
-Grafana: http://localhost:3001
+Node-RED editor: http://localhost:1880
+Node-RED dashboard: http://localhost:1880/ui/
+InfluxDB: http://localhost:8086
+Grafana: http://localhost:3000
 MQTT: localhost:1883
 MQTT WebSocket: localhost:9001
 ```
@@ -292,7 +288,7 @@ Flow หลัก:
 nodered/flows/esp32_level3_dashboard.json
 ```
 
-Dashboard ใช้ node-red-dashboard รุ่นเก่า (`ui_gauge`, `ui_text`, `ui_switch`) จึงต้องติดตั้ง `node-red-dashboard@3.6.6` และเปิดที่ path `/ui/`
+Dashboard ใช้ node-red-dashboard รุ่นเก่า (`ui_gauge`, `ui_text`, `ui_switch`) และเปิดที่ path `/ui/`
 
 MQTT settings ที่ต้องตรงกับ firmware:
 

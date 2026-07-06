@@ -1,61 +1,65 @@
+name: esp32-project-level3
+
+x-service-defaults: &service-defaults
+  restart: unless-stopped
+  networks:
+    - iot_net
+
+x-timezone: &timezone
+  TZ: ${TZ:-Asia/Bangkok}
+
 services:
   mqtt:
-    image: eclipse-mosquitto:2
-    restart: unless-stopped
+    <<: *service-defaults
+    image: ${MOSQUITTO_IMAGE:-eclipse-mosquitto:2}
     ports:
-      - "${MQTT_PORT}:1883"
-      - "${MQTT_WS_PORT}:9001"
+      - "1883:1883"
+      - "9001:9001"
     volumes:
       - ./mosquitto/config:/mosquitto/config:ro
       - mqtt_data:/mosquitto/data
       - mqtt_log:/mosquitto/log
-    networks:
-      - iot_net
 
   nodered:
-    image: nodered/node-red:latest
-    restart: unless-stopped
+    <<: *service-defaults
+    build:
+      context: ./nodered
+    image: ${NODERED_IMAGE:-esp32-project-level3-nodered:latest}
     environment:
-      - TZ=${TZ}
+      <<: *timezone
     ports:
-      - "${NODERED_PORT}:1880"
+      - "1880:1880"
     volumes:
       - nodered_data:/data
       - ./nodered/flows/esp32_level3_dashboard.json:/data/flows.json
     depends_on:
       - mqtt
       - influxdb
-    networks:
-      - iot_net
 
   influxdb:
-    image: influxdb:2
-    restart: unless-stopped
+    <<: *service-defaults
+    image: ${INFLUXDB_IMAGE:-influxdb:2}
     environment:
-      - TZ=${TZ}
+      <<: *timezone
     ports:
-      - "${INFLUXDB_PORT}:8086"
+      - "8086:8086"
     volumes:
-      - influxdb_data:/var/lib/influxdb2
-      - influxdb_config:/etc/influxdb2
-    networks:
-      - iot_net
+      - influxdb_data:${INFLUXDB_DATA_PATH:-/var/lib/influxdb2}
+      - influxdb_config:${INFLUXDB_CONFIG_PATH:-/etc/influxdb2}
 
   grafana:
-    image: grafana/grafana:latest
-    restart: unless-stopped
+    <<: *service-defaults
+    image: ${GRAFANA_IMAGE:-grafana/grafana:latest}
     environment:
-      - TZ=${TZ}
-      - GF_SECURITY_ADMIN_USER=${GF_SECURITY_ADMIN_USER}
-      - GF_SECURITY_ADMIN_PASSWORD=${GF_SECURITY_ADMIN_PASSWORD}
+      <<: *timezone
+      GF_SECURITY_ADMIN_USER: ${GF_SECURITY_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GF_SECURITY_ADMIN_PASSWORD:-password}
     ports:
-      - "${GRAFANA_PORT}:3000"
+      - "3000:3000"
     volumes:
       - grafana_data:/var/lib/grafana
     depends_on:
       - influxdb
-    networks:
-      - iot_net
 
 networks:
   iot_net:

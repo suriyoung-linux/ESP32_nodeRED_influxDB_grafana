@@ -92,21 +92,28 @@ blueprint.md                Detailed architecture notes
 platformio.ini              PlatformIO build/upload config
 
 ../docker-compose.yml       Docker services: MQTT, Node-RED, InfluxDB, Grafana
-../.env                     Host port settings
+../.env.example             Example local Docker settings
+../.env                     Local Docker overrides and secrets, not committed
 ../nodered/flows/
   esp32_level3_dashboard.json  Node-RED Dashboard flow, mounted to /data/flows.json
 ```
 
 ## Configuration
 
-แก้ไฟล์ [include/config.h](include/config.h) ก่อนใช้งานจริง:
+ค่า default อยู่ใน [include/config.h](include/config.h) และค่าลับ/ค่าประจำเครื่องให้ใส่ใน `config_private.h`
+
+```bash
+cp esp32_firmware/include/config_private.h.example esp32_firmware/include/config_private.h
+```
+
+จากนั้นแก้ `config_private.h`:
 
 ```cpp
 #define OWM_API_KEY   "YOUR_OPENWEATHERMAP_KEY"
 #define OWM_LAT       "13.909"
 #define OWM_LON       "100.424"
 #define OWM_CITY_NAME "Nonthaburi"
-#define WEATHER_UPDATE_SEC  5000
+#define WEATHER_UPDATE_SEC  300
 
 #define MQTT_HOST     "broker.hivemq.com"
 #define MQTT_PORT     1883
@@ -119,7 +126,7 @@ platformio.ini              PlatformIO build/upload config
 
 - `WEATHER_UPDATE_SEC` เป็นวินาที ถ้าต้องการ 5 นาทีให้ตั้ง `300`
 - `MQTT_CLIENT_ID` และ `MQTT_BASE` ควรตั้งให้ unique ถ้าใช้ broker public
-- ไม่ควร commit API key จริงขึ้น public repository
+- ไม่ควร commit API key จริงขึ้น public repository; `config_private.h` ถูก ignore แล้ว
 - ถ้าเปลี่ยน `OWM_CITY_NAME` หน้า web dashboard จะเปลี่ยนตาม payload โดยไม่ต้องแก้ `dashboard.h`
 
 ## Build / Upload
@@ -270,11 +277,11 @@ mosquitto_sub -h broker.hivemq.com -t "ESP32-Level3/#"
 
 ## Node-RED Dashboard
 
-Docker Compose expose Node-RED ที่พอร์ต host `1881` ตาม `.env`
+Docker Compose expose Node-RED ด้วยพอร์ตมาตรฐาน `1880`
 
 ```text
-Node-RED editor: http://localhost:1881
-Node-RED dashboard: http://localhost:1881/ui/
+Node-RED editor: http://localhost:1880
+Node-RED dashboard: http://localhost:1880/ui/
 ```
 
 Flow หลักอยู่ที่:
@@ -403,7 +410,7 @@ Keys:
 
 ### Node-RED Dashboard ไม่ขึ้น
 
-- เปิด URL ให้ถูก: `http://localhost:1881/ui/`
+- เปิด URL ให้ถูก: `http://localhost:1880/ui/`
 - ตรวจว่า `node-red-dashboard@3.6.6` ติดตั้งแล้ว
 - ตรวจว่า `nodered/flows/esp32_level3_dashboard.json` ถูก mount เป็น `/data/flows.json`
 - ตรวจ log ต้องเห็น `Dashboard version 3.6.6 started at /ui`
