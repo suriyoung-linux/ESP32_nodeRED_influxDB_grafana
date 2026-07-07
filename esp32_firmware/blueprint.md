@@ -1,6 +1,6 @@
 # ESP32 DevKit Template Project - Blueprint
 
-เอกสารนี้อธิบายโครงสร้าง firmware เวอร์ชันปัจจุบันหลัง optimization ล่าสุด โดยเน้นภาพรวมระบบ, class responsibility, runtime flow, pin map, web/MQTT payload และข้อควรระวังสำหรับการดูแลต่อยอดโปรเจกต์
+เอกสารนี้อธิบายโครงสร้าง firmware และ Docker/Node-RED stack เวอร์ชันปัจจุบันหลัง optimization ล่าสุด โดยเน้นภาพรวมระบบ, class responsibility, runtime flow, pin map, web/MQTT payload, InfluxDB logging และข้อควรระวังสำหรับการดูแลต่อยอดโปรเจกต์
 
 ## สถานะล่าสุด
 
@@ -25,6 +25,7 @@ Firmware นี้รวมหลาย subsystem ไว้ใน ESP32 ตั�
 - WiFi provisioning ด้วย WiFiManager ผ่าน captive portal `ESP32-Setup`
 - Dashboard web app ผ่าน HTTP + WebSocket
 - MQTT telemetry/control ผ่าน HiveMQ public broker
+- Node-RED classic dashboard และ InfluxDB telemetry logging ผ่าน Docker Compose
 - Weather จาก OpenWeatherMap ผ่าน HTTPS
 - Relay 3 ช่อง พร้อม state persistence ใน NVS
 - DS18B20 temperature sensor พร้อม simulation fallback
@@ -105,8 +106,10 @@ include/
 docker-compose.yml          MQTT, Node-RED, InfluxDB, Grafana stack
 .env.example                Example local Docker settings
 .env                        Local Docker overrides and secrets, not committed
+nodered/Dockerfile          Custom Node-RED image with dashboard + InfluxDB nodes
+nodered/entrypoint.sh       Seed flow into /data/flows.json when volume is empty
 nodered/flows/
-  esp32_level3_dashboard.json  Classic Node-RED Dashboard flow, mounted to /data/flows.json
+  esp32_level3_dashboard.json  Classic Node-RED Dashboard + InfluxDB flow seed
 ```
 
 ## Class Responsibilities
@@ -235,8 +238,28 @@ Node-RED / Docker:
 | Node-RED editor | `http://localhost:1880` |
 | Node-RED dashboard | `http://localhost:1880/ui/` |
 | Flow file | `nodered/flows/esp32_level3_dashboard.json` |
-| Container flow path | `/data/flows.json` |
+| Runtime flow path | `/data/flows.json` in `nodered_data` volume |
+| Flow seed path | `/usr/src/node-red/flows/esp32_level3_dashboard.json` in image |
 | Dashboard package | `node-red-dashboard@3.6.6` |
+| InfluxDB package | `node-red-contrib-influxdb@0.7.0` |
+
+Node-RED flow มี 2 tab:
+
+| Tab | หน้าที่ |
+|---|---|
+| `ESP32 Level3` | Dashboard gauges/text/switches และ relay command |
+| `ESP32 to InfluxDB` | Subscribe telemetry แล้วแปลงเป็น fields สำหรับ InfluxDB |
+
+Flow ถูก seed เข้า image แล้ว copy ไป `/data/flows.json` เฉพาะตอน named volume ยังไม่มี flow เพื่อให้ Node-RED สามารถกด Deploy และบันทึกไฟล์ด้วย temp rename ได้ตามปกติ ห้าม bind mount file ตรงไปที่ `/data/flows.json` เพราะอาจเกิด `EBUSY`
+
+InfluxDB output ใน Node-RED:
+
+| ค่า | ปัจจุบัน |
+|---|---|
+| URL | `http://influxdb:8086` |
+| Org | `mylab` |
+| Bucket | `esp32_db` |
+| Measurement | `data_telemetry` |
 
 Topic map:
 
@@ -261,6 +284,8 @@ Optimization ล่าสุดใน `DevMQTT`:
 - publish telemetry แบบ retained และส่งทันทีหลัง MQTT connect สำเร็จ
 - serialize telemetry ลง `char[]` โดยตรง แทนสร้าง `String` payload ทุกครั้ง
 - parse MQTT command payload ด้วย fixed buffer แทนต่อ `String` ใน callback
+- ใช้ reconnect interval เป็น `constexpr` และเก็บ retry timer เป็น member state
+- guard relay index ก่อน publish relay state
 
 Node-RED flow ใช้ topic ที่ต้องตรงกับ firmware:
 
@@ -347,6 +372,8 @@ Relay state จะเขียน NVS เฉพาะเมื่อค่าเ
 - reserve JSON output `String` ก่อน serialize
 - ป้องกัน string buffer ไม่ null-terminated ใน OLED cache
 - dashboard city ไม่ hardcode แล้ว อ่านจาก `OWM_CITY_NAME`
+- Node-RED flow seed แยกจาก runtime volume เพื่อแก้ปัญหา Deploy แล้ว save flow ไม่ได้จาก `EBUSY`
+- Node-RED InfluxDB flow ใช้ Docker service name `influxdb` แทน `localhost`
 
 ข้อที่ยังควรพิจารณาต่อ:
 

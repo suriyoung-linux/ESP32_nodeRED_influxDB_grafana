@@ -1,10 +1,12 @@
 # ESP32 Smart IoT Controller
 
-Firmware สำหรับ ESP32 DevKit V1 ที่รวม OLED UI, relay control, sensor monitoring, WiFi setup, Web Dashboard, MQTT และ OpenWeatherMap ไว้ในโปรเจกต์เดียว
+Firmware สำหรับ ESP32 DevKit V1 ที่รวม OLED UI, relay control, sensor monitoring, WiFi setup, Web Dashboard, MQTT, Node-RED Dashboard, InfluxDB logging และ OpenWeatherMap ไว้ในโปรเจกต์เดียว
 
-โปรเจกต์นี้ถูก optimize ล่าสุดเพื่อลด dynamic `String` ใน path ที่เรียกบ่อย, cache MQTT/Web topics, ใช้ `huge_app.csv` เพื่อเพิ่ม flash headroom และปรับ dashboard ให้ดึงชื่อเมืองจาก `config.h` แทน hardcode
+โปรเจกต์นี้ถูก optimize ล่าสุดเพื่อลด dynamic `String` ใน path ที่เรียกบ่อย, cache MQTT/Web topics, ใช้ `huge_app.csv` เพื่อเพิ่ม flash headroom, ปรับ MQTT reconnect state ให้ชัดขึ้น และแก้ Node-RED flow ให้ seed เข้า volume แทน bind mount ไฟล์ตรง
 
 รายละเอียด architecture เชิงลึกอยู่ที่ [blueprint.md](blueprint.md)
+
+คู่มือใช้งานแบบ step-by-step อยู่ที่ [../USER_GUIDE.md](../USER_GUIDE.md)
 
 ## Features
 
@@ -16,6 +18,7 @@ Firmware สำหรับ ESP32 DevKit V1 ที่รวม OLED UI, relay co
 - WiFiManager captive portal ชื่อ `ESP32-Setup`
 - Web Dashboard ผ่าน HTTP + WebSocket
 - MQTT telemetry/control ผ่าน HiveMQ public broker
+- Node-RED Dashboard + InfluxDB telemetry flow ผ่าน Docker Compose
 - Weather, rain chance, PM2.5 และ AQI จาก OpenWeatherMap
 - Build partition แบบ `huge_app.csv` สำหรับ firmware ขนาดใหญ่
 
@@ -95,7 +98,8 @@ platformio.ini              PlatformIO build/upload config
 ../.env.example             Example local Docker settings
 ../.env                     Local Docker overrides and secrets, not committed
 ../nodered/flows/
-  esp32_level3_dashboard.json  Node-RED Dashboard flow, mounted to /data/flows.json
+  esp32_level3_dashboard.json  Node-RED Dashboard + InfluxDB flow seed
+../nodered/entrypoint.sh       Seed flow into /data/flows.json when volume is empty
 ```
 
 ## Configuration
@@ -237,17 +241,19 @@ Base topic ปัจจุบัน:
 ESP32-Level3
 ```
 
-Node-RED Dashboard flow ใช้ base topic เดียวกันนี้ และถูก bind mount จาก:
+Node-RED Dashboard flow ใช้ base topic เดียวกันนี้ และถูก seed จาก:
 
 ```text
 nodered/flows/esp32_level3_dashboard.json
 ```
 
-ไปเป็นไฟล์ใน container:
+เข้า image แล้ว copy ไปเป็นไฟล์ runtime เมื่อ volume ยังว่าง:
 
 ```text
 /data/flows.json
 ```
+
+อย่า bind mount ไฟล์ seed ตรงไปที่ `/data/flows.json` เพราะ Node-RED ใช้วิธีเขียนไฟล์ temp แล้ว rename ทับไฟล์จริง ซึ่งอาจเกิด `EBUSY` เมื่อ target เป็น bind-mounted file
 
 Publish:
 
@@ -290,18 +296,35 @@ Flow หลักอยู่ที่:
 nodered/flows/esp32_level3_dashboard.json
 ```
 
-Flow นี้ใช้ `node-red-dashboard@3.6.6` node แบบ classic:
+Flow นี้มี 2 tab:
+
+```text
+ESP32 Level3          Dashboard + relay control
+ESP32 to InfluxDB    MQTT telemetry -> InfluxDB
+```
+
+Flow นี้ใช้ `node-red-dashboard@3.6.6` node แบบ classic และ `node-red-contrib-influxdb@0.7.0`:
 
 ```text
 ui_gauge
 ui_text
 ui_switch
+influxdb out
 ```
 
-ถ้าแก้ flow ใน VS Code แล้วต้องการให้ Node-RED โหลดใหม่:
+InfluxDB config ใน Node-RED เมื่อรันผ่าน Docker Compose:
+
+```text
+URL: http://influxdb:8086
+Org: mylab
+Bucket: esp32_db
+Measurement: data_telemetry
+```
+
+ถ้าแก้ flow ใน Node-RED editor ให้กด Deploy ได้ตามปกติและ runtime จะบันทึกลง volume `nodered_data` ถ้าแก้ flow seed ใน VS Code ให้ rebuild image สำหรับเครื่องใหม่:
 
 ```bash
-docker compose restart nodered
+docker compose up -d --build nodered
 ```
 
 ตรวจสถานะ:
@@ -365,6 +388,7 @@ Keys:
 - เพิ่ม `monitor_speed = 115200`
 - cache local IP เป็น `char[]` ใน `main.cpp`
 - cache MQTT topics เป็น `char[]` ใน `DevMQTT`
+- ย้าย MQTT reconnect timer เป็น member state และเพิ่ม guard relay index
 - cache dashboard MQTT topics ใน `DevWebServer`
 - ลด heap allocation ใน MQTT telemetry, MQTT command callback และ WebSocket JSON broadcast
 - ใช้ fixed JSON buffer ใน `DevWebServer` เพื่อลด heap fragmentation ระหว่าง broadcast ทุก 2 วินาที
@@ -412,9 +436,21 @@ Keys:
 
 - เปิด URL ให้ถูก: `http://localhost:1880/ui/`
 - ตรวจว่า `node-red-dashboard@3.6.6` ติดตั้งแล้ว
-- ตรวจว่า `nodered/flows/esp32_level3_dashboard.json` ถูก mount เป็น `/data/flows.json`
+- ตรวจว่า flow runtime ใน `/data/flows.json` มี tabs `ESP32 Level3` และ `ESP32 to InfluxDB`
 - ตรวจ log ต้องเห็น `Dashboard version 3.6.6 started at /ui`
 - ตรวจ MQTT topic ต้องเป็น `ESP32-Level3/telemetry`
+
+### Node-RED Deploy แล้ว save flow ไม่ได้
+
+- ถ้า log มี `EBUSY ... rename '/data/flows.json.$$$' -> '/data/flows.json'` ให้ตรวจว่าไม่ได้ bind mount ไฟล์ตรงไปที่ `/data/flows.json`
+- Compose ปัจจุบันควรใช้ named volume `nodered_data:/data` และ seed flow ผ่าน `nodered/entrypoint.sh`
+
+### InfluxDB ไม่ได้ข้อมูลจาก Node-RED
+
+- Influx URL ใน Node-RED container ต้องเป็น `http://influxdb:8086` ไม่ใช่ `localhost` หรือ `127.0.0.1`
+- ตรวจ topic ใน Influx tab ต้องเป็น `ESP32-Level3/telemetry`
+- ตรวจ `org=mylab`, `bucket=esp32_db`, `measurement=data_telemetry`
+- ถ้า log InfluxDB ขึ้น `Unauthorized` ให้ตรวจ token ใน Node-RED config node เพราะ token อยู่ใน `flows_cred.json` แบบ encrypted
 
 ### XY-MD03 เป็น SIM ตลอด
 

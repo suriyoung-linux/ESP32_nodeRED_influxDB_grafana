@@ -7,6 +7,205 @@
         "info": ""
     },
     {
+        "id": "0ac163c9e74fa511",
+        "type": "mqtt-broker",
+        "name": "",
+        "broker": "broker.hivemq.com",
+        "port": 1883,
+        "clientid": "",
+        "autoConnect": true,
+        "usetls": false,
+        "protocolVersion": 4,
+        "keepalive": 60,
+        "cleansession": true,
+        "autoUnsubscribe": true,
+        "birthTopic": "",
+        "birthQos": "0",
+        "birthRetain": "false",
+        "birthPayload": "",
+        "birthMsg": {},
+        "closeTopic": "",
+        "closeQos": "0",
+        "closeRetain": "false",
+        "closePayload": "",
+        "closeMsg": {},
+        "willTopic": "",
+        "willQos": "0",
+        "willRetain": "false",
+        "willPayload": "",
+        "willMsg": {},
+        "userProps": "",
+        "sessionExpiry": ""
+    },
+    {
+        "id": "ui_tab_main",
+        "type": "ui_tab",
+        "name": "ESP32 Dashboard",
+        "icon": "dashboard",
+        "disabled": false,
+        "hidden": false
+    },
+    {
+        "id": "55776349e2c8cd3e",
+        "type": "global-config",
+        "env": [],
+        "modules": {
+            "node-red-dashboard": "3.6.6",
+            "node-red-contrib-influxdb": "0.7.0"
+        }
+    },
+    {
+        "id": "ui_group_temp",
+        "type": "ui_group",
+        "name": "Temperature Sensors",
+        "tab": "ui_tab_main",
+        "order": 2,
+        "disp": true,
+        "width": "6",
+        "collapse": false
+    },
+    {
+        "id": "ui_group_weather",
+        "type": "ui_group",
+        "name": "Weather Data",
+        "tab": "ui_tab_main",
+        "order": 3,
+        "disp": true,
+        "width": "6",
+        "collapse": false
+    },
+    {
+        "id": "ui_group_system",
+        "type": "ui_group",
+        "name": "System Info",
+        "tab": "ui_tab_main",
+        "order": 4,
+        "disp": true,
+        "width": "6",
+        "collapse": false
+    },
+    {
+        "id": "ui_group_relay",
+        "type": "ui_group",
+        "name": "Relay Control",
+        "tab": "ui_tab_main",
+        "order": 1,
+        "disp": true,
+        "width": "6",
+        "collapse": false
+    },
+    {
+        "id": "805a5051e60a2ff7",
+        "type": "ui_base",
+        "theme": {
+            "name": "theme-light",
+            "lightTheme": {
+                "default": "#0094CE",
+                "baseColor": "#0094CE",
+                "baseFont": "-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Oxygen-Sans,Ubuntu,Cantarell,Helvetica Neue,sans-serif",
+                "edited": false
+            },
+            "darkTheme": {
+                "default": "#097479",
+                "baseColor": "#097479",
+                "baseFont": "-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Oxygen-Sans,Ubuntu,Cantarell,Helvetica Neue,sans-serif",
+                "edited": false
+            },
+            "customTheme": {
+                "name": "Untitled Theme 1",
+                "default": "#4B7930",
+                "baseColor": "#4B7930",
+                "baseFont": "-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Oxygen-Sans,Ubuntu,Cantarell,Helvetica Neue,sans-serif"
+            },
+            "themeState": {
+                "base-color": {
+                    "default": "#0094CE",
+                    "value": "#0094CE",
+                    "edited": false
+                },
+                "page-titlebar-backgroundColor": {
+                    "value": "#0094CE",
+                    "edited": false
+                },
+                "page-backgroundColor": {
+                    "value": "#fafafa",
+                    "edited": false
+                },
+                "page-sidebar-backgroundColor": {
+                    "value": "#ffffff",
+                    "edited": false
+                },
+                "group-textColor": {
+                    "value": "#1bbfff",
+                    "edited": false
+                },
+                "group-borderColor": {
+                    "value": "#ffffff",
+                    "edited": false
+                },
+                "group-backgroundColor": {
+                    "value": "#ffffff",
+                    "edited": false
+                },
+                "widget-textColor": {
+                    "value": "#111111",
+                    "edited": false
+                },
+                "widget-backgroundColor": {
+                    "value": "#0094ce",
+                    "edited": false
+                },
+                "widget-borderColor": {
+                    "value": "#ffffff",
+                    "edited": false
+                },
+                "base-font": {
+                    "value": "-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Oxygen-Sans,Ubuntu,Cantarell,Helvetica Neue,sans-serif"
+                }
+            },
+            "angularTheme": {
+                "primary": "indigo",
+                "accents": "blue",
+                "warn": "red",
+                "background": "grey",
+                "palette": "light"
+            }
+        },
+        "site": {
+            "name": "Node-RED Dashboard",
+            "hideToolbar": "false",
+            "allowSwipe": "false",
+            "lockMenu": "false",
+            "allowTempTheme": "true",
+            "dateFormat": "DD/MM/YYYY",
+            "sizes": {
+                "sx": 48,
+                "sy": 48,
+                "gx": 6,
+                "gy": 6,
+                "cx": 6,
+                "cy": 6,
+                "px": 0,
+                "py": 0
+            }
+        }
+    },
+    {
+        "id": "2901a45f9f29d29b",
+        "type": "influxdb",
+        "hostname": "influxdb",
+        "port": 8086,
+        "protocol": "http",
+        "database": "database",
+        "name": "InfluxDB Server",
+        "usetls": false,
+        "tls": "",
+        "influxdbVersion": "2.0",
+        "url": "http://influxdb:8086",
+        "timeout": 10,
+        "rejectUnauthorized": true
+    },
+    {
         "id": "node_mqtt_in_telemetry",
         "type": "mqtt in",
         "z": "tab_esp32",
@@ -627,90 +826,105 @@
         "wires": []
     },
     {
-        "id": "0ac163c9e74fa511",
-        "type": "mqtt-broker",
-        "name": "",
-        "broker": "broker.hivemq.com",
-        "port": 1883,
-        "clientid": "",
-        "autoConnect": true,
-        "usetls": false,
-        "protocolVersion": 4,
-        "keepalive": 60,
-        "cleansession": true,
-        "autoUnsubscribe": true,
-        "birthTopic": "",
-        "birthQos": "0",
-        "birthRetain": "false",
-        "birthPayload": "",
-        "birthMsg": {},
-        "closeTopic": "",
-        "closeQos": "0",
-        "closeRetain": "false",
-        "closePayload": "",
-        "closeMsg": {},
-        "willTopic": "",
-        "willQos": "0",
-        "willRetain": "false",
-        "willPayload": "",
-        "willMsg": {},
-        "userProps": "",
-        "sessionExpiry": ""
-    },
-    {
-        "id": "ui_group_temp",
-        "type": "ui_group",
-        "name": "Temperature Sensors",
-        "tab": "ui_tab_main",
-        "order": 2,
-        "disp": true,
-        "width": "6",
-        "collapse": false
-    },
-    {
-        "id": "ui_group_weather",
-        "type": "ui_group",
-        "name": "Weather Data",
-        "tab": "ui_tab_main",
-        "order": 3,
-        "disp": true,
-        "width": "6",
-        "collapse": false
-    },
-    {
-        "id": "ui_group_system",
-        "type": "ui_group",
-        "name": "System Info",
-        "tab": "ui_tab_main",
-        "order": 4,
-        "disp": true,
-        "width": "6",
-        "collapse": false
-    },
-    {
-        "id": "ui_group_relay",
-        "type": "ui_group",
-        "name": "Relay Control",
-        "tab": "ui_tab_main",
-        "order": 1,
-        "disp": true,
-        "width": "6",
-        "collapse": false
-    },
-    {
-        "id": "ui_tab_main",
-        "type": "ui_tab",
-        "name": "ESP32 Dashboard",
-        "icon": "dashboard",
+        "id": "tab_influx",
+        "type": "tab",
+        "label": "ESP32 to InfluxDB",
         "disabled": false,
-        "hidden": false
+        "info": "Flow รับข้อมูล telemetry จาก ESP32 Level3 ผ่าน MQTT แล้วเขียนเข้า InfluxDB"
     },
     {
-        "id": "55776349e2c8cd3e",
-        "type": "global-config",
-        "env": [],
-        "modules": {
-            "node-red-dashboard": "3.6.6"
-        }
+        "id": "node_mqtt_in_telemetry_influx",
+        "type": "mqtt in",
+        "z": "tab_influx",
+        "name": "Level3 Telemetry",
+        "topic": "ESP32-Level3/telemetry",
+        "qos": "0",
+        "datatype": "json",
+        "broker": "0ac163c9e74fa511",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 130,
+        "y": 120,
+        "wires": [
+            [
+                "node_build_influx_points",
+                "8605060cd11ea819"
+            ]
+        ]
+    },
+    {
+        "id": "node_build_influx_points",
+        "type": "function",
+        "z": "tab_influx",
+        "name": "Build InfluxDB Points",
+        "func": "var d = msg.payload;\nvar fields = {};\n\nif (d.ds18) {\n    if (d.ds18.temp !== undefined && d.ds18.temp !== null) fields.ds18_temp = Number(d.ds18.temp);\n    if (d.ds18.sim  !== undefined && d.ds18.sim  !== null) fields.ds18_sim  = Number(d.ds18.sim);\n}\n\nif (d.xymd) {\n    if (d.xymd.temp !== undefined && d.xymd.temp !== null) fields.xymd_temp = Number(d.xymd.temp);\n    if (d.xymd.hum  !== undefined && d.xymd.hum  !== null) fields.xymd_hum  = Number(d.xymd.hum);\n}\n\nif (d.weather) {\n    if (d.weather.temp !== undefined && d.weather.temp !== null) fields.weather_temp = Number(d.weather.temp);\n    if (d.weather.hum  !== undefined && d.weather.hum  !== null) fields.weather_hum  = Number(d.weather.hum);\n    if (d.weather.rain !== undefined && d.weather.rain !== null) fields.weather_rain = Number(d.weather.rain);\n    if (d.weather.pm25 !== undefined && d.weather.pm25 !== null) fields.weather_pm25 = Number(d.weather.pm25);\n    if (d.weather.aqi  !== undefined && d.weather.aqi  !== null) fields.weather_aqi  = Number(d.weather.aqi);\n    if (d.weather.aqiLabel !== undefined && d.weather.aqiLabel !== null) fields.weather_aqiLabel = String(d.weather.aqiLabel);\n}\n\nif (d.sys) {\n    if (d.sys.rssi   !== undefined && d.sys.rssi   !== null) fields.sys_rssi   = Number(d.sys.rssi);\n    if (d.sys.heap   !== undefined && d.sys.heap   !== null) fields.sys_heap   = Number(d.sys.heap);\n    if (d.sys.uptime !== undefined && d.sys.uptime !== null) fields.sys_uptime = Number(d.sys.uptime);\n    if (d.sys.ip     !== undefined && d.sys.ip     !== null) fields.sys_ip     = String(d.sys.ip);\n}\n\nif (d.relay) {\n    if (d.relay['1'] !== undefined) fields.relay1 = (d.relay['1'] === 'ON') ? 1 : 0;\n    if (d.relay['2'] !== undefined) fields.relay2 = (d.relay['2'] === 'ON') ? 1 : 0;\n    if (d.relay['3'] !== undefined) fields.relay3 = (d.relay['3'] === 'ON') ? 1 : 0;\n}\n\nif (Object.keys(fields).length === 0) {\n    return null; // ไม่มีข้อมูลให้เขียน\n}\n\nmsg.payload = fields;\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 400,
+        "y": 100,
+        "wires": [
+            [
+                "node_influxdb_out",
+                "node_debug_influx"
+            ]
+        ]
+    },
+    {
+        "id": "node_influxdb_out",
+        "type": "influxdb out",
+        "z": "tab_influx",
+        "influxdb": "2901a45f9f29d29b",
+        "name": "Write ESP32 Telemetry",
+        "measurement": "data_telemetry",
+        "precision": "",
+        "retentionPolicy": "",
+        "database": "database",
+        "precisionV18FluxV20": "ms",
+        "retentionPolicyV18Flux": "",
+        "org": "mylab",
+        "bucket": "esp32_db",
+        "x": 690,
+        "y": 100,
+        "wires": []
+    },
+    {
+        "id": "node_debug_influx",
+        "type": "debug",
+        "z": "tab_influx",
+        "name": "Debug Influx Payload",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 710,
+        "y": 200,
+        "wires": []
+    },
+    {
+        "id": "8605060cd11ea819",
+        "type": "debug",
+        "z": "tab_influx",
+        "name": "Debug Raw Telemetry",
+        "active": false,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 320,
+        "y": 200,
+        "wires": [],
+        "targetType": "msg"
     }
 ]

@@ -31,7 +31,6 @@ services:
       - "1880:1880"
     volumes:
       - nodered_data:/data
-      - ./nodered/flows/esp32_level3_dashboard.json:/data/flows.json
     depends_on:
       - mqtt
       - influxdb

@@ -2,6 +2,8 @@
 
 คู่มือนี้เป็นขั้นตอนติดตั้งและเริ่มใช้งาน MQTT, Node-RED, InfluxDB และ Grafana ด้วย Docker Compose
 
+ถ้าต้องการคู่มือใช้งานทั้งระบบตั้งแต่ firmware, Node-RED, InfluxDB และ relay control ให้ดู [USER_GUIDE.md](USER_GUIDE.md)
+
 > ให้รันคำสั่งทั้งหมดจากโฟลเดอร์โปรเจกต์นี้ เพื่อให้ Docker Compose อ่านไฟล์ `.env` และ `docker-compose.yml` ได้ถูกต้อง
 
 ถ้ายังไม่มี `.env` ให้สร้างจากไฟล์ตัวอย่างก่อน:
@@ -96,17 +98,23 @@ docker compose exec nodered sh -lc 'npm ls --depth=0 node-red-dashboard node-red
 docker compose up -d --build nodered
 ```
 
-โปรเจกต์นี้ bind mount flow จากไฟล์ใน workspace เข้า Node-RED โดยตรง:
+โปรเจกต์นี้ seed flow ตั้งต้นจากไฟล์ใน workspace เข้า Node-RED image:
 
 ```text
-nodered/flows/esp32_level3_dashboard.json -> /data/flows.json
+nodered/flows/esp32_level3_dashboard.json -> image:/usr/src/node-red/flows/esp32_level3_dashboard.json
 ```
 
-ดังนั้นเมื่อแก้ไฟล์ flow ใน VS Code ให้ restart Node-RED เพื่อโหลด flow ใหม่:
+ตอน container เริ่มทำงาน `nodered/entrypoint.sh` จะ copy flow นี้ไป `/data/flows.json` เฉพาะกรณีที่ volume ยังไม่มี flow เท่านั้น หลังจากนั้น Node-RED จะบันทึก flow ลง named volume `nodered_data` เอง
+
+ถ้าแก้ flow ใน Node-RED editor ให้กด Deploy ได้ตามปกติ ไม่ควร bind mount ไฟล์ตรงไปที่ `/data/flows.json` เพราะ Node-RED ใช้วิธีเขียนไฟล์ temp แล้ว rename ทับไฟล์จริง ซึ่งอาจชน `EBUSY` เมื่อ target เป็น bind-mounted file
+
+ถ้าแก้ flow seed ใน VS Code แล้วต้องการ rebuild image สำหรับเครื่องใหม่:
 
 ```bash
-docker compose restart nodered
+docker compose up -d --build nodered
 ```
+
+ถ้าต้องการบังคับให้ volume ปัจจุบันโหลด flow seed ใหม่ ให้ backup/export flow ใน Node-RED ก่อน แล้วค่อยลบ volume หรือ import flow ผ่าน editor/API การ restart เฉย ๆ จะใช้ `/data/flows.json` เดิมใน volume ต่อไป
 
 ตรวจสอบอีกครั้งว่า Node-RED กลับมา healthy
 
@@ -217,7 +225,7 @@ docker compose down -v
 - การตั้งค่า Grafana
 - ข้อมูล persistence ของ MQTT
 
-หมายเหตุ: flow หลักของ Node-RED ถูก bind mount จาก `nodered/flows/esp32_level3_dashboard.json` จึงอยู่ใน workspace ไม่ได้หายไปพร้อม volume
+หมายเหตุ: flow seed อยู่ใน workspace ที่ `nodered/flows/esp32_level3_dashboard.json` แต่ flow runtime อยู่ใน named volume `nodered_data` ที่ `/data/flows.json` ถ้าใช้ `docker compose down -v` flow runtime, credentials, node settings และข้อมูลใน volume จะหายทั้งหมด ควร export flow หรือ commit seed flow ล่าสุดก่อนล้าง volume
 
 ## 11. อัปเดต Image
 
@@ -290,6 +298,13 @@ nodered/flows/esp32_level3_dashboard.json
 
 Dashboard ใช้ node-red-dashboard รุ่นเก่า (`ui_gauge`, `ui_text`, `ui_switch`) และเปิดที่ path `/ui/`
 
+Flow ปัจจุบันมี 2 tab:
+
+```text
+ESP32 Level3          Dashboard + relay control
+ESP32 to InfluxDB    MQTT telemetry -> InfluxDB
+```
+
 MQTT settings ที่ต้องตรงกับ firmware:
 
 ```text
@@ -299,3 +314,16 @@ Base topic: ESP32-Level3
 Telemetry: ESP32-Level3/telemetry
 Relay command: ESP32-Level3/relay/{1|2|3}/set
 ```
+
+InfluxDB settings ที่ Node-RED ต้องใช้เมื่อรันใน Docker network:
+
+```text
+URL: http://influxdb:8086
+Org: mylab
+Bucket: esp32_db
+Measurement: data_telemetry
+```
+
+ถ้าเห็น log `ECONNREFUSED 127.0.0.1:8086` แปลว่า Influx config ใน Node-RED ยังชี้ localhost อยู่ ต้องเปลี่ยนเป็น service name `influxdb`
+
+ถ้าเห็น `Unauthorized` หรือเขียน InfluxDB ไม่เข้า ให้ตรวจ token ใน Node-RED config node เพราะ token ถูกเก็บใน `/data/flows_cred.json` แบบ encrypted และไม่ได้อยู่ในไฟล์ flow seed

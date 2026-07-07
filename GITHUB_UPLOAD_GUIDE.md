@@ -119,11 +119,15 @@ esp32_firmware/
 docker-compose.yml
 .env.example
 nodered/Dockerfile
+nodered/entrypoint.sh
 nodered/flows/esp32_level3_dashboard.json
+USER_GUIDE.md
 DOCKER_GUIDE.md
 ```
 
 > ไม่ควร commit ไฟล์ `.env` จริง เพราะอาจมีรหัสผ่านหรือ token ให้ commit `.env.example` แทน แล้วค่อย copy เป็น `.env` ในเครื่องที่ deploy
+
+> Node-RED credentials เช่น InfluxDB token อยู่ใน `flows_cred.json` แบบ encrypted ภายใน volume/runtime ไม่ควร commit token จริงขึ้น repository ให้ตั้งค่า token ผ่าน Node-RED editor ในเครื่อง deploy
 
 ## 7. ดึงโค้ดล่าสุดจาก GitHub
 

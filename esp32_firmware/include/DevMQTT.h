@@ -23,6 +23,9 @@
 
 class DevMQTT {
 private:
+  static constexpr unsigned long MQTT_RECONNECT_MS = 5000UL;
+  static constexpr size_t TELEMETRY_BUFFER_SIZE = 1024;
+
   WiFiClient    wifiClient;
   PubSubClient  client;
 
@@ -34,6 +37,7 @@ private:
   void (*onRelayChange)() = nullptr;
 
   unsigned long lastTelemetry = 0;
+  unsigned long lastReconnectAttempt = 0;
   bool          connected     = false;
 
   char mqttClientId[sizeof(MQTT_CLIENT_ID) + 14] = {};
@@ -103,7 +107,7 @@ private:
   }
 
   bool _publishTelemetry() {
-    char payload[1024];
+    char payload[TELEMETRY_BUFFER_SIZE];
     size_t len = _buildTelemetry(payload, sizeof(payload));
     bool ok = (len > 0 && len < sizeof(payload)) &&
               client.publish(topicTelemetryBuf, payload, true);
@@ -114,6 +118,7 @@ private:
 
   // ── Publish relay state ───────────────────────────────────────
   void _pubRelayState(int n) {   // n = 1..3
+    if (n < 1 || n > 3) return;
     const char* val = relay[n - 1]->getState() ? "ON" : "OFF";
     client.publish(relayStateTopic[n - 1], val, true);  // retain=true
   }
@@ -148,6 +153,7 @@ private:
     for (int i = 1; i <= 3; i++) _pubRelayState(i);
 
     connected = true;
+    lastReconnectAttempt = 0;
     Serial.printf("[MQTT] Connected to %s:%d as %s\n",
                   MQTT_HOST, MQTT_PORT, mqttClientId);
     _publishTelemetry();
@@ -197,7 +203,7 @@ public:
   void begin() {
     _initTopics();
     client.setServer(MQTT_HOST, MQTT_PORT);
-    client.setBufferSize(1024);
+    client.setBufferSize(TELEMETRY_BUFFER_SIZE);
     // ส่ง this ผ่าน lambda capture
     client.setCallback([this](char* t, byte* p, unsigned int l) {
       _callback(t, p, l, this);
@@ -210,9 +216,9 @@ public:
     // reconnect ถ้าหลุด
     if (!client.connected()) {
       connected = false;
-      static unsigned long lastRetry = 0;
-      if (millis() - lastRetry > 5000) {
-        lastRetry = millis();
+      unsigned long now = millis();
+      if (lastReconnectAttempt == 0 || now - lastReconnectAttempt >= MQTT_RECONNECT_MS) {
+        lastReconnectAttempt = now;
         _connect();
       }
       return;

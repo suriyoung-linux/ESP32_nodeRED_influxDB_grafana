@@ -232,19 +232,21 @@ void loop() {
   }
 
   // ── Sensors update ─────────────────────────────────────────
-  if (ds18.update() && sm.getState() == AppState::MONITOR) {
+  bool isMonitor = sm.getState() == AppState::MONITOR;
+
+  if (ds18.update() && isMonitor) {
     _drawCurrentState();
   }
-  if (xymd.update() && sm.getState() == AppState::MONITOR) {
+  if (xymd.update() && isMonitor) {
     _drawCurrentState();
   }
   if (weather.isDue()) {
     weather.update();
-    if (sm.getState() == AppState::MONITOR) _drawCurrentState();
+    if (isMonitor) _drawCurrentState();
   }
 
   // ── OLED auto-cycle (เฉพาะ MONITOR state) ─────────────────
-  if (sm.getState() == AppState::MONITOR) {
+  if (isMonitor) {
     oled.tick(sm.isOledFast() ? 2000UL : 5000UL);
   }
 
