@@ -1,4 +1,4 @@
-# วิธีสร้าง Repository ใหม่บน GitHub และอัพโหลดโปรเจกต์
+# ESP32_nodeRED_influxDB_grafana_Level3 — GitHub Upload Guide
 
 คู่มือนี้ใช้สำหรับอัพโหลดโปรเจกต์ในเครื่องขึ้น GitHub หรืออัพเดตโค้ดใหม่เข้า repository เดิม
 
@@ -21,7 +21,7 @@ git config --global user.email "อีเมล GitHub ของคุณ"
 
 1. เข้าเว็บไซต์ <https://github.com>
 2. กดปุ่ม **New repository**
-3. ตั้งชื่อ repository เช่น `ESP32-Project-Level3`
+3. ตั้งชื่อ repository เช่น `ESP32_nodeRED_influxDB_grafana_Level3`
 4. เลือกเป็น **Public** หรือ **Private**
 5. ไม่ต้องติ๊ก `Add a README file` ถ้าในโปรเจกต์มีไฟล์อยู่แล้ว
 6. กด **Create repository**
@@ -108,7 +108,7 @@ git push
 ตัวอย่าง:
 
 ```bash
-git commit -m "Update ESP32 Level3 MQTT and Node-RED dashboard"
+git commit -m "Update ESP32 Node-RED InfluxDB Grafana system"
 git push
 ```
 
@@ -116,12 +116,14 @@ git push
 
 ```text
 esp32_firmware/
+README.md
+FIRMWARE_BLUEPRINT.md
 docker-compose.yml
 .env.example
 nodered/Dockerfile
 nodered/entrypoint.sh
 nodered/flows/esp32_level3_dashboard.json
-grafana-dashboard-esp32.json
+grafana/dashboards/grafana-dashboard-esp32.json
 GRAFANA_DASHBOARD.md
 GRAFANA_QUERY_GUIDE.md
 USER_GUIDE.md

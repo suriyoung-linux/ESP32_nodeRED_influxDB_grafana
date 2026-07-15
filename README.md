@@ -1,12 +1,54 @@
-# ESP32 Smart IoT Controller
+# ESP32_nodeRED_influxDB_grafana_Level3
 
 Firmware สำหรับ ESP32 DevKit V1 ที่รวม OLED UI, relay control, sensor monitoring, WiFi setup, Web Dashboard, MQTT, Node-RED Dashboard, InfluxDB logging และ OpenWeatherMap ไว้ในโปรเจกต์เดียว
 
 โปรเจกต์นี้ถูก optimize ล่าสุดเพื่อลด dynamic `String` ใน path ที่เรียกบ่อย, cache MQTT/Web topics, ใช้ `huge_app.csv` เพื่อเพิ่ม flash headroom, ปรับ MQTT reconnect state ให้ชัดขึ้น และแก้ Node-RED flow ให้ seed เข้า volume แทน bind mount ไฟล์ตรง
 
-รายละเอียด architecture เชิงลึกอยู่ที่ [blueprint.md](blueprint.md)
+รายละเอียด architecture เชิงลึกอยู่ที่ [FIRMWARE_BLUEPRINT.md](FIRMWARE_BLUEPRINT.md)
 
-คู่มือใช้งานแบบ step-by-step อยู่ที่ [../USER_GUIDE.md](../USER_GUIDE.md)
+ไดอะแกรมเส้นทางข้อมูลและคำสั่งควบคุมอยู่ที่ [SYSTEM_FLOW_DIAGRAM.md](SYSTEM_FLOW_DIAGRAM.md)
+
+คู่มือใช้งานแบบ step-by-step อยู่ที่ [USER_GUIDE.md](USER_GUIDE.md)
+
+## Documentation
+
+| เอกสาร | เนื้อหา |
+|---|---|
+| [README.md](README.md) | ภาพรวม firmware, hardware, configuration และ troubleshooting |
+| [USER_GUIDE.md](USER_GUIDE.md) | วิธีติดตั้งและใช้งานระบบแบบ step-by-step |
+| [FIRMWARE_BLUEPRINT.md](FIRMWARE_BLUEPRINT.md) | Architecture, runtime flow และ class responsibilities |
+| [SYSTEM_FLOW_DIAGRAM.md](SYSTEM_FLOW_DIAGRAM.md) | Mermaid diagrams ของ telemetry, relay control, Docker network และ data flow |
+| [DOCKER_GUIDE.md](DOCKER_GUIDE.md) | Docker Compose, service management และ performance tuning |
+| [GRAFANA_DASHBOARD.md](GRAFANA_DASHBOARD.md) | ตั้งค่า Grafana Data Source และนำเข้า dashboard |
+| [GRAFANA_QUERY_GUIDE.md](GRAFANA_QUERY_GUIDE.md) | ตัวอย่าง Flux query สำหรับ sensor และสถานะระบบ |
+| [GITHUB_UPLOAD_GUIDE.md](GITHUB_UPLOAD_GUIDE.md) | เตรียม repository, commit และ push ขึ้น GitHub |
+
+## Project Naming
+
+ชื่อหลักของโปรเจกต์และหัวข้อเอกสารคือ `ESP32_nodeRED_influxDB_grafana_Level3`
+
+ชื่อแบบอ่านง่ายคือ **ESP32 + Node-RED + InfluxDB + Grafana — Level3** โดยคำว่า `Level3`
+เป็นส่วนหนึ่งของชื่อโครงการเดิมและอธิบายที่มาของ runtime identifiers ด้านล่าง ส่วนค่าต่อไปนี้เป็น runtime identifiers
+ที่ระบบใช้งานอยู่และต้องตรงกันระหว่าง firmware, Node-RED, InfluxDB และ Grafana:
+
+| รายการ | ค่ามาตรฐาน |
+|---|---|
+| MQTT client prefix | `esp32-level3` |
+| MQTT base topic | `ESP32-Level3` |
+| Docker Compose project | `esp32-project-level3` |
+| Node-RED dashboard tab | `ESP32 Level3` |
+| Node-RED flow seed | `nodered/flows/esp32_level3_dashboard.json` |
+| InfluxDB organization | `mylab` |
+| InfluxDB bucket | `esp32_db` |
+| InfluxDB measurement | `ESP32level3_telemetry` |
+| Grafana dashboard | `grafana/dashboards/grafana-dashboard-esp32.json` |
+
+การเปลี่ยนชื่อ runtime identifiers ต้องแก้ทุก service พร้อมกันและวางแผนย้ายข้อมูลเดิม จึงไม่ควรเปลี่ยน
+เพียงเพื่อให้เหมือนชื่อ repository
+
+โฟลเดอร์ workspace และ GitHub remote ปัจจุบันยังใช้ชื่อ `ESP32-Project-Level3` การเปลี่ยนสองส่วนนี้
+ทำแยกภายหลังได้โดยไม่กระทบชื่อหัวข้อเอกสาร แต่หากเปลี่ยนชื่อโฟลเดอร์ต้อง regenerate
+`compile_commands.json` และเปิด workspace ใน VS Code ใหม่
 
 ## Features
 
@@ -33,7 +75,7 @@ Firmware สำหรับ ESP32 DevKit V1 ที่รวม OLED UI, relay co
 | Monitor speed | `115200` |
 | Build flag | `CONFIG_ASYNC_TCP_RUNNING_CORE=1` |
 | Build ล่าสุด | `pio run` ผ่าน |
-| Memory ล่าสุด | RAM `15.9%`, Flash `37.9%` |
+| Memory ล่าสุด | RAM `16.2%`, Flash `37.9%` |
 
 > `huge_app.csv` ช่วยให้ firmware มีพื้นที่ app มากขึ้น แต่ไม่ใช่ partition แบบ dual OTA
 
@@ -71,10 +113,10 @@ Firmware สำหรับ ESP32 DevKit V1 ที่รวม OLED UI, relay co
 ## Project Structure
 
 ```text
-src/
+esp32_firmware/src/
   main.cpp                  Main orchestration, setup/loop, event dispatch
 
-include/
+esp32_firmware/include/
   config.h                  API key, weather location, MQTT config
   dashboard.h               Web Dashboard HTML/CSS/JS in PROGMEM
   DevOLED.h                 OLED screens and cached display data
@@ -91,20 +133,22 @@ include/
   DevIsoInput.h             Reusable isolated input helper
   DevPZEM.h                 Optional PZEM-016 helper, not wired in main.cpp
 
-blueprint.md                Detailed architecture notes
-platformio.ini              PlatformIO build/upload config
+esp32_firmware/platformio.ini  PlatformIO build/upload config
 
-../docker-compose.yml       Docker services: MQTT, Node-RED, InfluxDB, Grafana
-../.env.example             Example local Docker settings
-../.env                     Local Docker overrides and secrets, not committed
-../nodered/flows/
+FIRMWARE_BLUEPRINT.md       Detailed architecture notes
+docker-compose.yml          Docker services: MQTT, Node-RED, InfluxDB, Grafana
+.env.example                Example local Docker settings
+.env                        Local Docker overrides and secrets, not committed
+nodered/flows/
   esp32_level3_dashboard.json  Node-RED Dashboard + InfluxDB flow seed
-../nodered/entrypoint.sh       Seed flow into /data/flows.json when volume is empty
+nodered/entrypoint.sh       Seed flow into /data/flows.json when volume is empty
+grafana/dashboards/
+  grafana-dashboard-esp32.json  Grafana dashboard สำหรับ import/export
 ```
 
 ## Configuration
 
-ค่า default อยู่ใน [include/config.h](include/config.h) และค่าลับ/ค่าประจำเครื่องให้ใส่ใน `config_private.h`
+ค่า default อยู่ใน [esp32_firmware/include/config.h](esp32_firmware/include/config.h) และค่าลับ/ค่าประจำเครื่องให้ใส่ใน `esp32_firmware/include/config_private.h`
 
 ```bash
 cp esp32_firmware/include/config_private.h.example esp32_firmware/include/config_private.h
@@ -159,7 +203,7 @@ Serial monitor:
 /home/ubuntu/.platformio/penv/bin/pio device list
 ```
 
-แล้วแก้ `upload_port` / `monitor_port` ใน [platformio.ini](platformio.ini) เป็น `/dev/ttyUSB0` หรือ `/dev/ttyACM0` ตามที่เครื่องเห็นจริง
+แล้วแก้ `upload_port` / `monitor_port` ใน [esp32_firmware/platformio.ini](esp32_firmware/platformio.ini) เป็น `/dev/ttyUSB0` หรือ `/dev/ttyACM0` ตามที่เครื่องเห็นจริง
 
 ## First Boot
 
@@ -483,7 +527,7 @@ Keys:
 
 ## Libraries
 
-จัดการผ่าน `platformio.ini`
+จัดการผ่าน `esp32_firmware/platformio.ini`
 
 | Library | หน้าที่ |
 |---|---|
@@ -500,7 +544,7 @@ Keys:
 ## Maintenance
 
 - README นี้เป็นคู่มือใช้งานและเริ่มต้น
-- [blueprint.md](blueprint.md) เป็นเอกสาร architecture และ flow เชิงลึก
+- [FIRMWARE_BLUEPRINT.md](FIRMWARE_BLUEPRINT.md) เป็นเอกสาร architecture และ flow เชิงลึก
 - ถ้าเพิ่ม feature ใหม่ ให้แก้ทั้ง README และ blueprint ให้ตรงกับ code
 
 สร้างด้วย PlatformIO, Arduino Framework และ ESP32 DevKit V1

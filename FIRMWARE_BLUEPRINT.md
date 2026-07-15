@@ -1,4 +1,4 @@
-# ESP32 DevKit Template Project - Blueprint
+# ESP32_nodeRED_influxDB_grafana_Level3 — Firmware Blueprint
 
 เอกสารนี้อธิบายโครงสร้าง firmware และ Docker/Node-RED stack เวอร์ชันปัจจุบันหลัง optimization ล่าสุด โดยเน้นภาพรวมระบบ, class responsibility, runtime flow, pin map, web/MQTT payload, InfluxDB logging และข้อควรระวังสำหรับการดูแลต่อยอดโปรเจกต์
 
@@ -83,10 +83,10 @@ loop()
 ## Project Structure
 
 ```text
-src/
+esp32_firmware/src/
   main.cpp                  Main orchestration, object wiring, setup/loop
 
-include/
+esp32_firmware/include/
   config.h                  API keys, weather location, MQTT config, intervals
   dashboard.h               HTML/CSS/JS dashboard stored in PROGMEM
   DevOLED.h                 OLED cache + drawing + menu screens
@@ -110,6 +110,8 @@ nodered/Dockerfile          Custom Node-RED image with dashboard + InfluxDB node
 nodered/entrypoint.sh       Seed flow into /data/flows.json when volume is empty
 nodered/flows/
   esp32_level3_dashboard.json  Classic Node-RED Dashboard + InfluxDB flow seed
+grafana/dashboards/
+  grafana-dashboard-esp32.json  Grafana dashboard สำหรับ import/export
 ```
 
 ## Class Responsibilities
@@ -170,7 +172,7 @@ State machine ส่ง event กลับให้ `main.cpp`:
 
 ## Web Dashboard
 
-Dashboard อยู่ใน `include/dashboard.h` เป็น HTML/CSS/JS ใน `PROGMEM`
+Dashboard อยู่ใน `esp32_firmware/include/dashboard.h` เป็น HTML/CSS/JS ใน `PROGMEM`
 
 Endpoints:
 
@@ -221,7 +223,7 @@ JSON snapshot หลัก:
 
 ## MQTT
 
-Config อยู่ใน `include/config.h`
+Config อยู่ใน `esp32_firmware/include/config.h`
 
 | ค่า | ปัจจุบัน |
 |---|---|
@@ -409,4 +411,4 @@ Upload:
 /home/ubuntu/.platformio/penv/bin/pio device list
 ```
 
-แล้วแก้ `upload_port` และ `monitor_port` ใน `platformio.ini` ให้ตรงกับ `/dev/ttyUSB0` หรือ `/dev/ttyACM0`
+แล้วแก้ `upload_port` และ `monitor_port` ใน `esp32_firmware/platformio.ini` ให้ตรงกับ `/dev/ttyUSB0` หรือ `/dev/ttyACM0`

@@ -1,7 +1,7 @@
-# วิธี Query ข้อมูล ESP32 บน Grafana
+# ESP32_nodeRED_influxDB_grafana_Level3 — Grafana Flux Query Guide
 
 คู่มือนี้ใช้สำหรับสร้าง Grafana panel ด้วยภาษา Flux เพื่ออ่านข้อมูลจาก InfluxDB ของโปรเจกต์
-ESP32 Level3 โดยอ้างอิงค่าที่ระบบปัจจุบันใช้งานจริง
+โดยอ้างอิงค่าที่ระบบปัจจุบันใช้งานจริง
 
 ## ค่าหลักที่ใช้
 

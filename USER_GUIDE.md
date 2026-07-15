@@ -1,6 +1,7 @@
-# ESP32 Level3 User Guide
+# ESP32_nodeRED_influxDB_grafana_Level3 — User Guide
 
-คู่มือนี้ใช้สำหรับเริ่มระบบ, เปิด dashboard, ควบคุม relay, ตรวจ MQTT, และตั้งค่า Node-RED/InfluxDB ของโปรเจกต์ ESP32 Level3
+คู่มือนี้ใช้สำหรับเริ่มระบบ, เปิด dashboard, ควบคุม relay, ตรวจ MQTT และตั้งค่า Node-RED/InfluxDB
+ของโปรเจกต์ `ESP32_nodeRED_influxDB_grafana_Level3`
 
 ## 1. ภาพรวมระบบ
 
@@ -159,7 +160,7 @@ Serial monitor:
 /home/ubuntu/.platformio/penv/bin/pio device list
 ```
 
-แล้วแก้ `upload_port` / `monitor_port` ใน `platformio.ini`
+แล้วแก้ `upload_port` / `monitor_port` ใน `esp32_firmware/platformio.ini`
 
 ## 7. First Boot
 

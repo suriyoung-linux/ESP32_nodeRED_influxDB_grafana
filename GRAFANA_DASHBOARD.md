@@ -1,7 +1,8 @@
-# Grafana Dashboard สำหรับ ESP32 Level3
+# ESP32_nodeRED_influxDB_grafana_Level3 — Grafana Dashboard Guide
 
 เอกสารนี้อธิบายการเชื่อม Grafana กับ InfluxDB และการนำเข้า dashboard จากไฟล์
-`grafana-dashboard-esp32.json` เพื่อแสดงข้อมูล telemetry ของ ESP32 Level3
+`grafana/dashboards/grafana-dashboard-esp32.json` เพื่อแสดงข้อมูล telemetry ของโปรเจกต์
+`ESP32_nodeRED_influxDB_grafana_Level3`
 
 ## ภาพรวมการไหลของข้อมูล
 
@@ -24,7 +25,7 @@ ESP32 -> MQTT -> Node-RED -> InfluxDB -> Grafana
 | Organization | `mylab` |
 | Bucket | `esp32_db` |
 | Measurement | `ESP32level3_telemetry` |
-| Dashboard JSON | `grafana-dashboard-esp32.json` |
+| Dashboard JSON | `grafana/dashboards/grafana-dashboard-esp32.json` |
 
 ## 1. เตรียมระบบ
 
@@ -107,7 +108,7 @@ Measurement: ESP32level3_telemetry
 
 1. ไปที่ **Dashboards > New > Import**
 2. กด **Upload dashboard JSON file**
-3. เลือกไฟล์ `grafana-dashboard-esp32.json` จากโฟลเดอร์หลักของโปรเจกต์
+3. เลือกไฟล์ `grafana/dashboards/grafana-dashboard-esp32.json` จากโฟลเดอร์โปรเจกต์
 4. ที่ช่อง `InfluxDB-ESP32` เลือก Data Source ที่สร้างไว้
 5. กด **Import**
 
@@ -212,5 +213,5 @@ container แต่จะหายหากลบ volume นี้
 
 1. เปิด dashboard ใน Grafana
 2. ไปที่ **Dashboard settings > JSON model** หรือเลือก **Export**
-3. บันทึกทับ `grafana-dashboard-esp32.json`
+3. บันทึกทับ `grafana/dashboards/grafana-dashboard-esp32.json`
 4. ตรวจว่าไฟล์ไม่มี token, password หรือข้อมูลลับก่อน commit
