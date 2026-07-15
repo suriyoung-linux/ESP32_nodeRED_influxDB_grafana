@@ -27,6 +27,7 @@ services:
     image: ${NODERED_IMAGE:-esp32-project-level3-nodered:latest}
     environment:
       <<: *timezone
+      NODE_OPTIONS: --max-old-space-size=${NODERED_MAX_OLD_SPACE_MB:-256}
     ports:
       - "1880:1880"
     volumes:
@@ -40,6 +41,7 @@ services:
     image: ${INFLUXDB_IMAGE:-influxdb:2}
     environment:
       <<: *timezone
+      INFLUXD_REPORTING_DISABLED: "true"
     ports:
       - "8086:8086"
     volumes:
@@ -53,6 +55,12 @@ services:
       <<: *timezone
       GF_SECURITY_ADMIN_USER: ${GF_SECURITY_ADMIN_USER:-admin}
       GF_SECURITY_ADMIN_PASSWORD: ${GF_SECURITY_ADMIN_PASSWORD:-password}
+      GF_ANALYTICS_REPORTING_ENABLED: "false"
+      GF_ANALYTICS_CHECK_FOR_UPDATES: "false"
+      GF_ANALYTICS_CHECK_FOR_PLUGIN_UPDATES: "false"
+      GF_PLUGINS_PREINSTALL_DISABLED: "true"
+      GF_PLUGINS_PREINSTALL_AUTO_UPDATE: "false"
+      GF_USERS_ALLOW_SIGN_UP: "false"
     ports:
       - "3000:3000"
     volumes:

@@ -18,10 +18,20 @@ public:
 
   // เรียกใน setup() — บล็อกจนกว่าจะเชื่อมต่อสำเร็จ
   // resetConfig = true จะลบ credentials ก่อนแล้วเปิด portal
-  void begin(bool resetConfig = false) {
+  bool begin(bool resetConfig = false,
+             unsigned long configPortalTimeoutSec = 180,
+             unsigned long connectTimeoutSec = 30) {
     if (resetConfig) {
+      WiFi.disconnect(true, true);
       wm.resetSettings();
     }
+
+    wm.setCleanConnect(true);
+    wm.setConnectTimeout(connectTimeoutSec);
+    wm.setConfigPortalTimeout(configPortalTimeoutSec);
+    wm.setConfigPortalTimeoutCallback([this]() {
+      if (oled) oled->showMessage("WiFi Setup", "Timeout", "Retry boot");
+    });
 
     _showConnecting();
 
@@ -33,10 +43,12 @@ public:
 
     if (ok) {
       _showConnected();
+      return true;
     } else {
       _showFailed();
       delay(3000);
       ESP.restart();
+      return false;
     }
   }
 

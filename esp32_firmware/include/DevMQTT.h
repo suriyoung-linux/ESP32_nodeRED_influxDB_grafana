@@ -45,6 +45,7 @@ private:
   char topicTelemetryBuf[sizeof(MQTT_BASE) + 11] = {};
   char relayStateTopic[3][sizeof(MQTT_BASE) + 16] = {};
   char relaySetTopic[3][sizeof(MQTT_BASE) + 14] = {};
+  char telemetryBuffer[TELEMETRY_BUFFER_SIZE] = {};
 
   // ── Topics ────────────────────────────────────────────────────
   void _initTopics() {
@@ -107,10 +108,9 @@ private:
   }
 
   bool _publishTelemetry() {
-    char payload[TELEMETRY_BUFFER_SIZE];
-    size_t len = _buildTelemetry(payload, sizeof(payload));
-    bool ok = (len > 0 && len < sizeof(payload)) &&
-              client.publish(topicTelemetryBuf, payload, true);
+    size_t len = _buildTelemetry(telemetryBuffer, sizeof(telemetryBuffer));
+    bool ok = (len > 0 && len < sizeof(telemetryBuffer) - 1) &&
+              client.publish(topicTelemetryBuf, telemetryBuffer, true);
     Serial.printf("[MQTT] >> %s telemetry (%u bytes, retained) topic=%s\n",
                   ok ? "sent" : "FAILED", (unsigned)len, topicTelemetryBuf);
     return ok;

@@ -166,6 +166,8 @@ Serial monitor:
 1. Upload firmware
 2. ถ้ายังไม่มี WiFi credentials บอร์ดจะเปิด portal `ESP32-Setup`
 3. เชื่อม WiFi จากมือถือ/คอม แล้วตั้งค่า SSID/password
+   - หมายเหตุ: ESP32 จะต่อ WiFi และจัดการการเข้ารหัสเองตาม AP ที่เลือกใน captive portal
+   - หากเครือข่ายเปลี่ยนหรือ credential ผิด ให้กด SW1 ค้างตอน boot เพื่อ clear credentials แล้วเปิด portal ใหม่
 4. OLED จะแสดง IP address
 5. เปิด browser ไปที่ `http://<IP>`
 6. Dashboard จะ update ผ่าน WebSocket ทุก 2 วินาที
@@ -318,7 +320,7 @@ InfluxDB config ใน Node-RED เมื่อรันผ่าน Docker Comp
 URL: http://influxdb:8086
 Org: mylab
 Bucket: esp32_db
-Measurement: data_telemetry
+Measurement: ESP32level3_telemetry
 ```
 
 ถ้าแก้ flow ใน Node-RED editor ให้กด Deploy ได้ตามปกติและ runtime จะบันทึกลง volume `nodered_data` ถ้าแก้ flow seed ใน VS Code ให้ rebuild image สำหรับเครื่องใหม่:
@@ -391,12 +393,19 @@ Keys:
 - ย้าย MQTT reconnect timer เป็น member state และเพิ่ม guard relay index
 - cache dashboard MQTT topics ใน `DevWebServer`
 - ลด heap allocation ใน MQTT telemetry, MQTT command callback และ WebSocket JSON broadcast
+- เก็บ MQTT telemetry buffer เป็น member เพื่อลด peak stack usage
 - ใช้ fixed JSON buffer ใน `DevWebServer` เพื่อลด heap fragmentation ระหว่าง broadcast ทุก 2 วินาที
+- อ่าน DS18B20 แบบ asynchronous ไม่ block loop ระหว่างรอ conversion 12-bit
+- จำกัด WebSocket client cleanup ทุก 5 วินาทีแทนการ scan ทุก loop
+- ใส่ `delay(1)` เพื่อคืนเวลาให้ WiFi/AsyncTCP task และลด CPU busy-spin
+- เขียน NVS เฉพาะ key ของ relay ที่เปลี่ยนจริง
 - ลดการสร้าง `String` ใน Weather URL และ MQTT/Web payload
 - JSON float ส่งเป็น number แทน stringified number
 - reserve JSON output buffer ก่อน serialize
 - ป้องกัน `strncpy` ไม่ใส่ null terminator ใน OLED cache
 - Dashboard weather city อ่านจาก `OWM_CITY_NAME`
+- ปิด Node-RED debug nodes ใน seed และใช้ measurement เดียว `ESP32level3_telemetry`
+- Grafana Time series ใช้ `aggregateWindow()` และ Stat ใช้ `last()`
 
 ## Troubleshooting
 
@@ -449,7 +458,7 @@ Keys:
 
 - Influx URL ใน Node-RED container ต้องเป็น `http://influxdb:8086` ไม่ใช่ `localhost` หรือ `127.0.0.1`
 - ตรวจ topic ใน Influx tab ต้องเป็น `ESP32-Level3/telemetry`
-- ตรวจ `org=mylab`, `bucket=esp32_db`, `measurement=data_telemetry`
+- ตรวจ `org=mylab`, `bucket=esp32_db`, `measurement=ESP32level3_telemetry`
 - ถ้า log InfluxDB ขึ้น `Unauthorized` ให้ตรวจ token ใน Node-RED config node เพราะ token อยู่ใน `flows_cred.json` แบบ encrypted
 
 ### XY-MD03 เป็น SIM ตลอด

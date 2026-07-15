@@ -121,6 +121,9 @@ docker-compose.yml
 nodered/Dockerfile
 nodered/entrypoint.sh
 nodered/flows/esp32_level3_dashboard.json
+grafana-dashboard-esp32.json
+GRAFANA_DASHBOARD.md
+GRAFANA_QUERY_GUIDE.md
 USER_GUIDE.md
 DOCKER_GUIDE.md
 ```

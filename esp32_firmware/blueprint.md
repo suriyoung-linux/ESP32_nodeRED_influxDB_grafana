@@ -259,7 +259,7 @@ InfluxDB output ใน Node-RED:
 | URL | `http://influxdb:8086` |
 | Org | `mylab` |
 | Bucket | `esp32_db` |
-| Measurement | `data_telemetry` |
+| Measurement | `ESP32level3_telemetry` |
 
 Topic map:
 
@@ -368,12 +368,19 @@ Relay state จะเขียน NVS เฉพาะเมื่อค่าเ
 - ลด dynamic `String` ใน path ที่เรียกบ่อย เช่น MQTT topic, dashboard topic, weather URL, OLED IP
 - cache topic MQTT/Web dashboard ล่วงหน้า
 - ใช้ fixed JSON buffer สำหรับ WebSocket/API snapshot เพื่อลด heap fragmentation
+- เก็บ MQTT telemetry buffer เป็น member เพื่อลด peak stack usage
+- DS18B20 ใช้ asynchronous conversion จึงไม่ block main loop ระหว่างรอ 12-bit conversion
+- WebSocket cleanup ทำทุก 5 วินาทีแทนทุก loop และ main loop yield ด้วย `delay(1)`
+- NVS เขียนเฉพาะ relay key ที่เปลี่ยนจริง
 - ใช้ numeric JSON value แทน stringified float
 - reserve JSON output `String` ก่อน serialize
 - ป้องกัน string buffer ไม่ null-terminated ใน OLED cache
 - dashboard city ไม่ hardcode แล้ว อ่านจาก `OWM_CITY_NAME`
 - Node-RED flow seed แยกจาก runtime volume เพื่อแก้ปัญหา Deploy แล้ว save flow ไม่ได้จาก `EBUSY`
 - Node-RED InfluxDB flow ใช้ Docker service name `influxdb` แทน `localhost`
+- ปิด debug nodes ใน flow seed และใช้ measurement เดียว `ESP32level3_telemetry`
+- Grafana Time series ใช้ `aggregateWindow()` และ panel สถานะใช้ `last()`
+- Docker ลด background reporting/plugin update และจำกัด Node-RED V8 old-space ผ่าน `.env`
 
 ข้อที่ยังควรพิจารณาต่อ:
 

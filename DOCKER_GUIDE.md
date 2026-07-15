@@ -321,9 +321,33 @@ InfluxDB settings ที่ Node-RED ต้องใช้เมื่อรั�
 URL: http://influxdb:8086
 Org: mylab
 Bucket: esp32_db
-Measurement: data_telemetry
+Measurement: ESP32level3_telemetry
 ```
 
 ถ้าเห็น log `ECONNREFUSED 127.0.0.1:8086` แปลว่า Influx config ใน Node-RED ยังชี้ localhost อยู่ ต้องเปลี่ยนเป็น service name `influxdb`
 
 ถ้าเห็น `Unauthorized` หรือเขียน InfluxDB ไม่เข้า ให้ตรวจ token ใน Node-RED config node เพราะ token ถูกเก็บใน `/data/flows_cred.json` แบบ encrypted และไม่ได้อยู่ในไฟล์ flow seed
+
+## 16. Performance Tuning
+
+ค่าเริ่มต้นถูกปรับเพื่อลดงานเบื้องหลังและควบคุม memory แล้ว:
+
+- Node-RED จำกัด V8 old-space ด้วย `NODERED_MAX_OLD_SPACE_MB=256`
+- InfluxDB ปิด usage reporting ด้วย `INFLUXD_REPORTING_DISABLED=true`
+- Grafana ปิด analytics reporting, update checks และ background plugin preinstall/update
+- Mosquitto เขียนเฉพาะ error/warning ลง log และไม่ log ทุก connection
+- Node-RED debug nodes ใน flow seed ปิดไว้เป็นค่าเริ่มต้น
+
+ตรวจ CPU และ memory แบบ real time:
+
+```bash
+docker stats
+```
+
+แนวทางสำหรับ InfluxDB/Grafana:
+
+- ใช้ telemetry interval `5s` หรือช้ากว่าสำหรับงาน monitoring ทั่วไป
+- ตั้ง Grafana refresh `10s` และใช้ `aggregateWindow(every: v.windowPeriod, ...)`
+- ใช้ `last()` สำหรับ Stat/Gauge เพื่อลดผลลัพธ์ที่ส่งกลับ
+- กำหนด bucket retention ตามพื้นที่ดิสก์แทน `infinite` เมื่อต้องเก็บข้อมูลระยะยาว
+- อย่าเปิด Node-RED debug node ค้างไว้ เพราะ payload จะถูก clone และสะสมใน debug sidebar

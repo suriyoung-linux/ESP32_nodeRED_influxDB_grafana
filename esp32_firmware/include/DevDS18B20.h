@@ -14,8 +14,11 @@ private:
   float             lastTemp;
   unsigned long     lastReadAt;
   unsigned long     simStart;
+  unsigned long     conversionStartedAt;
+  bool              conversionPending;
 
   static const unsigned long READ_INTERVAL = 2000; // ms
+  static const unsigned long CONVERSION_TIME = 750; // 12-bit conversion, ms
 
   float _simTemp() {
     // จำลอง 28–34°C แกว่งตาม sine wave
@@ -27,7 +30,8 @@ public:
   DevDS18B20(uint8_t gpioPin)
     : wire(gpioPin), sensors(&wire),
       pin(gpioPin), simMode(false),
-      lastTemp(0), lastReadAt(0), simStart(0) {}
+      lastTemp(0), lastReadAt(0), simStart(0),
+      conversionStartedAt(0), conversionPending(false) {}
 
   // คืน true = sensor จริง, false = simulation
   bool begin() {
@@ -41,24 +45,40 @@ public:
       return false;
     }
     sensors.setResolution(12); // 12-bit = 0.0625°C
+    sensors.setWaitForConversion(false);
     simMode = false;
+    sensors.requestTemperatures();
+    conversionStartedAt = millis();
+    conversionPending = true;
     Serial.printf("[DS18B20] Found %d sensor(s) on GPIO%d\n", count, pin);
     return true;
   }
 
-  // เรียกใน loop() — อ่านทุก READ_INTERVAL ms
+  // เรียกใน loop() — request/read แบบ non-blocking ทุก READ_INTERVAL ms
   // คืน true ถ้ามีค่าใหม่
   bool update() {
-    if (millis() - lastReadAt < READ_INTERVAL) return false;
-    lastReadAt = millis();
+    unsigned long now = millis();
 
     if (simMode) {
+      if (now - lastReadAt < READ_INTERVAL) return false;
+      lastReadAt = now;
       lastTemp = _simTemp();
       return true;
     }
 
-    sensors.requestTemperatures();
+    if (!conversionPending) {
+      if (now - lastReadAt < READ_INTERVAL) return false;
+      sensors.requestTemperatures();
+      conversionStartedAt = now;
+      conversionPending = true;
+      return false;
+    }
+
+    if (now - conversionStartedAt < CONVERSION_TIME) return false;
+
     float t = sensors.getTempCByIndex(0);
+    conversionPending = false;
+    lastReadAt = now;
     if (t == DEVICE_DISCONNECTED_C) {
       // sensor หลุด → fallback simulation
       simMode  = true;

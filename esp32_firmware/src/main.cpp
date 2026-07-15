@@ -254,4 +254,7 @@ void loop() {
   webServer.setMqttConnected(mqtt.isConnected());
   mqtt.loop();
   webServer.loop();
+
+  // คืนเวลาให้ WiFi/AsyncTCP task และลด busy-spin ของ loop task
+  delay(1);
 }

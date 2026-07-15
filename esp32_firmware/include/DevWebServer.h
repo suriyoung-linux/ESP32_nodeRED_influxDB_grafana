@@ -24,7 +24,9 @@ private:
   DevXYMDSensor*  xymd;
 
   unsigned long lastBroadcast = 0;
-  static const unsigned long BROADCAST_INTERVAL = 2000; // ms
+  unsigned long lastCleanup = 0;
+  static constexpr unsigned long BROADCAST_INTERVAL = 2000UL;
+  static constexpr unsigned long CLEANUP_INTERVAL = 5000UL;
   bool mqttConnected = false;
 
   void (*onRelayChange)() = nullptr; // callback → เรียก _updateDisplay() ใน main.cpp
@@ -213,9 +215,12 @@ public:
 
   // เรียกใน loop() — broadcast ทุก BROADCAST_INTERVAL ms
   void loop() {
-    ws.cleanupClients(); // คืน memory ของ client ที่ disconnect
-
     unsigned long now = millis();
+    if (now - lastCleanup >= CLEANUP_INTERVAL) {
+      lastCleanup = now;
+      ws.cleanupClients(); // ไม่ต้อง scan client list ทุก loop
+    }
+
     if (now - lastBroadcast >= BROADCAST_INTERVAL && ws.count() > 0) {
       lastBroadcast = now;
       ws.textAll(buildJson());

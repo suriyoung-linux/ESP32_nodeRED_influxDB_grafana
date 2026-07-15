@@ -30,6 +30,11 @@ Telemetry: ESP32-Level3/telemetry
 Relay command: ESP32-Level3/relay/{1|2|3}/set
 ```
 
+คู่มือ Grafana แยกตามงาน:
+
+- `GRAFANA_DASHBOARD.md` สำหรับตั้งค่า Data Source และนำเข้า dashboard
+- `GRAFANA_QUERY_GUIDE.md` สำหรับสร้าง Flux query และ panel
+
 ## 2. เตรียมค่า Local
 
 สร้างไฟล์ Docker env:
@@ -104,7 +109,7 @@ Bucket: esp32_db
 URL: http://influxdb:8086
 Org: mylab
 Bucket: esp32_db
-Measurement: data_telemetry
+Measurement: ESP32level3_telemetry
 ```
 
 หมายเหตุ: จากใน container Node-RED ต้องใช้ service name `influxdb` ไม่ใช่ `localhost`
@@ -161,6 +166,8 @@ Serial monitor:
 1. Upload firmware ลง ESP32
 2. ถ้ายังไม่มี WiFi credential บอร์ดจะเปิด portal `ESP32-Setup`
 3. เชื่อม WiFi จากมือถือหรือคอม แล้วตั้งค่า SSID/password
+   - หมายเหตุ: ESP32 จะต่อ WiFi และจัดการการเข้ารหัสเองตาม AP ที่เลือกใน captive portal
+   - หากเครือข่ายเปลี่ยนหรือ credential ผิด ให้กด SW1 ค้างตอน boot เพื่อ clear credentials แล้วเปิด portal ใหม่
 4. OLED จะแสดง IP address
 5. เปิด dashboard ของ ESP32 ที่ `http://<ESP32-IP>/`
 6. เปิด Node-RED dashboard ที่ `http://localhost:1880/ui/`
@@ -239,7 +246,23 @@ docker compose up -d --build nodered
 
 ก่อนล้าง volume ด้วย `docker compose down -v` ควร export flow และจด token/config สำคัญไว้ก่อน เพราะ `/data/flows.json` และ `/data/flows_cred.json` จะหายไปพร้อม volume
 
-## 11. Troubleshooting
+## 11. Performance และการดูแลข้อมูล
+
+- Firmware ส่ง telemetry ทุก `5000 ms` ซึ่งสมดุลระหว่างความละเอียดกับจำนวน write ลง InfluxDB
+- Node-RED debug nodes ใน flow seed ถูกปิดไว้ เปิดเฉพาะตอนวิเคราะห์ปัญหาแล้วปิดเมื่อเสร็จ
+- Grafana Time series ควรใช้ `aggregateWindow(every: v.windowPeriod, ...)` เพื่อลดจำนวนจุดเมื่อดูช่วงเวลานาน
+- Panel แบบ Stat/Gauge ควรลงท้าย query ด้วย `last()`
+- Dashboard refresh `10s` เหมาะกับ telemetry `5s`; ไม่ควรตั้ง refresh เร็วกว่าระยะส่งข้อมูล
+- ตั้ง retention ของ bucket ให้เหมาะกับพื้นที่ดิสก์ ระบบเดิมใช้ `infinite` ซึ่งข้อมูลจะโตต่อเนื่อง
+- ตรวจทรัพยากรด้วย `docker stats` และตรวจขนาด volume ก่อนพื้นที่ดิสก์เต็ม
+
+ค่าจำกัด heap ของ Node-RED ตั้งผ่าน `.env` ได้:
+
+```dotenv
+NODERED_MAX_OLD_SPACE_MB=256
+```
+
+## 12. Troubleshooting
 
 ### Node-RED Deploy แล้ว save ไม่ได้
 
@@ -261,7 +284,7 @@ EBUSY ... rename '/data/flows.json.$$$' -> '/data/flows.json'
 ### InfluxDB ไม่ได้ข้อมูล
 
 - URL ใน Node-RED ต้องเป็น `http://influxdb:8086`
-- ตรวจ Org/Bucket/Measurement: `mylab`, `esp32_db`, `data_telemetry`
+- ตรวจ Org/Bucket/Measurement: `mylab`, `esp32_db`, `ESP32level3_telemetry`
 - ตรวจ token ใน config node `InfluxDB Server`
 - ถ้า InfluxDB log ขึ้น `Unauthorized` ให้สร้างหรือใส่ token ใหม่
 

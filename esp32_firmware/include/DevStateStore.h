@@ -58,15 +58,22 @@ public:
 
   // บันทึก relay ทั้งหมดพร้อมกัน (ประหยัด open/close)
   void saveAllRelays(bool r1, bool r2, bool r3) {
-    bool changed = (_r[0] != r1 || _r[1] != r2 || _r[2] != r3);
-    if (!changed) return;
+    const bool next[3] = {r1, r2, r3};
+    bool changed[3] = {
+      _r[0] != next[0],
+      _r[1] != next[1],
+      _r[2] != next[2]
+    };
+    if (!changed[0] && !changed[1] && !changed[2]) return;
 
-    _r[0] = r1;  _r[1] = r2;  _r[2] = r3;
     prefs.begin(NS, false);
-    prefs.putBool("r1", r1);
-    prefs.putBool("r2", r2);
-    prefs.putBool("r3", r3);
+    if (changed[0]) prefs.putBool("r1", next[0]);
+    if (changed[1]) prefs.putBool("r2", next[1]);
+    if (changed[2]) prefs.putBool("r3", next[2]);
     prefs.end();
+    _r[0] = next[0];
+    _r[1] = next[1];
+    _r[2] = next[2];
 
     Serial.printf("[State] Saved R1:%d R2:%d R3:%d\n", r1, r2, r3);
   }
